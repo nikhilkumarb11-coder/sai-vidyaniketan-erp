@@ -11,7 +11,7 @@ const CONFIG = {
     phone: "",
     email: "",
     motto: "Knowledge is Wisdom",
-    logo: "assets/logo.svg",
+    logo: "assets/logo.jpg",
     academicYear: "2026-27"
   },
   theme: {

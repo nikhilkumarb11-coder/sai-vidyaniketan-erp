@@ -39,7 +39,7 @@ function setup() {
     phone: "",
     email: "",
     motto: "Knowledge is Wisdom",
-    logo: "assets/logo.svg",
+    logo: "assets/logo.jpg",
     academicYear: year
   });
   setSetting_("theme", {

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Sai Vidyaniketan School">
-  <circle cx="100" cy="100" r="92" fill="#FBF3E4" stroke="#1F8FD0" stroke-width="12"/>
-  <circle cx="100" cy="100" r="78" fill="none" stroke="#0E3A5F" stroke-width="3"/>
-  <path d="M100 48c8 18 28 28 28 48 0 18-14 32-28 40-14-8-28-22-28-40 0-20 20-30 28-48z" fill="#C62F45"/>
-  <path d="M70 128h60c-4 14-18 24-30 28-12-4-26-14-30-28z" fill="#C62F45"/>
-  <text x="100" y="178" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#0E3A5F" font-weight="700">SVS</text>
-</svg>

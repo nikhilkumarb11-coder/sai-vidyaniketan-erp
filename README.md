@@ -41,7 +41,7 @@ Default Principal after setup: `admin` / `Admin@123` — change immediately.
    - `apiUrl` → paste the Apps Script web app URL
    - `demoMode` → `false`
    - school name, address, logo path, colors, classes, fees, etc.
-3. Replace `assets/logo.svg` with the school logo if desired (`logo.png` is fine — update `CONFIG.school.logo`).
+3. School logo lives at `assets/logo.jpg` (update `CONFIG.school.logo` if you change the filename).
 4. Enable GitHub Pages (root or `/docs`).
 5. Log in as Principal and create teacher accounts under **Users**.
 
@@ -83,7 +83,7 @@ config.js          # school-specific config (edit for each school)
 index.html
 css/               # theme + app styles
 js/                # SPA (api, demo, auth, router, pages)
-assets/logo.svg
+assets/logo.jpg
 gas/               # Apps Script backend
 README.md
 Sai_Vidyaniketan_School_ERP_PRD.md
