@@ -1,5 +1,6 @@
 const Router = (() => {
   const routes = {};
+  const pageHtmlCache = new Map();
 
   function register(path, handler, opts = {}) {
     routes[path] = { handler, ...opts };
@@ -14,7 +15,7 @@ const Router = (() => {
       items.push({ path: "#/students", label: "Students", icon: "👤", roles: ["Principal"] });
       items.push({ path: "#/enquiries", label: "Enquiries", icon: "✉", roles: ["Principal"] });
       items.push({ path: "#/fees", label: "Fees", icon: "₹", roles: ["Principal"] });
-      items.push({ path: "#/pending", label: "Pending Fees", icon: "⚠", roles: ["Principal"] });
+      items.push({ path: "#/pending", label: "Pending", icon: "⚠", roles: ["Principal"] });
       items.push({ path: "#/reminders", label: "Reminders", icon: "🔔", roles: ["Principal"] });
     }
     items.push({ path: "#/attendance", label: "Attendance", icon: "✓", roles: ["Principal", "Teacher"] });
@@ -35,7 +36,7 @@ const Router = (() => {
     }
     if (m.exams !== false) {
       items.push({ path: "#/exams", label: "Exams", icon: "📝", roles: ["Principal", "Teacher"] });
-      items.push({ path: "#/reportcards", label: "Report Cards", icon: "📄", roles: ["Principal", "Teacher"] });
+      items.push({ path: "#/reportcards", label: "Reports", icon: "📄", roles: ["Principal", "Teacher"] });
     }
     if (m.timetable !== false) {
       items.push({ path: "#/timetable", label: "Timetable", icon: "📅", roles: ["Principal", "Teacher"] });
@@ -49,7 +50,7 @@ const Router = (() => {
       items.push({ path: "#/import", label: "Import", icon: "⇩", roles: ["Principal"] });
       items.push({ path: "#/settings", label: "Settings", icon: "⚙", roles: ["Principal"] });
       items.push({ path: "#/users", label: "Users", icon: "🔑", roles: ["Principal"] });
-      items.push({ path: "#/year", label: "Year Close", icon: "🗓", roles: ["Principal"] });
+      items.push({ path: "#/year", label: "Year close", icon: "🗓", roles: ["Principal"] });
     }
     const role = AppCache.user().role;
     return items.filter((i) => i.roles.includes(role));
@@ -75,6 +76,22 @@ const Router = (() => {
       .join("");
   }
 
+  function skeletonHtml() {
+    return `
+      <div class="skeleton-page">
+        <div class="skel skel-title"></div>
+        <div class="grid grid-4">
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+        </div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+        <div class="skel skel-row"></div>
+      </div>`;
+  }
+
   async function go() {
     if (!AppCache.user()) {
       App.showLogin();
@@ -86,22 +103,44 @@ const Router = (() => {
     const path = hash.split("?")[0];
     const entry = routes[path] || routes["#/dashboard"];
     const root = document.getElementById("app-content");
-    root.innerHTML = `<div class="card"><div class="loading-bar"></div><p style="margin:0.75rem 0 0;color:var(--muted)">Loading…</p></div>`;
-    try {
-      if (entry.principalOnly && !Auth.isPrincipal()) {
-        root.innerHTML = `<div class="card"><p>You do not have access to this page.</p></div>`;
-        return;
-      }
-      await entry.handler(root);
-    } catch (e) {
-      root.innerHTML = `<div class="card"><p class="badge badge-danger">${UI.esc(e.message)}</p></div>`;
-      UI.toast(e.message, "error");
+    const cacheKey = path;
+
+    if (entry.principalOnly && !Auth.isPrincipal()) {
+      root.innerHTML = `<div class="card"><p>You do not have access to this page.</p></div>`;
+      return;
     }
+
+    const cached = pageHtmlCache.get(cacheKey);
+    if (cached) {
+      root.innerHTML = cached;
+      root.classList.add("is-refreshing");
+    } else {
+      root.classList.remove("is-refreshing");
+      root.innerHTML = skeletonHtml();
+    }
+
+    try {
+      await entry.handler(root);
+      pageHtmlCache.set(cacheKey, root.innerHTML);
+    } catch (e) {
+      if (!cached) {
+        root.innerHTML = `<div class="card"><p class="badge badge-danger">${UI.esc(e.message)}</p></div>`;
+      } else {
+        UI.toast(e.message, "error");
+      }
+    } finally {
+      root.classList.remove("is-refreshing");
+    }
+  }
+
+  function invalidatePage(path) {
+    if (path) pageHtmlCache.delete(path);
+    else pageHtmlCache.clear();
   }
 
   function start() {
     window.addEventListener("hashchange", go);
   }
 
-  return { register, go, start, renderNav, navItems };
+  return { register, go, start, renderNav, navItems, invalidatePage };
 })();

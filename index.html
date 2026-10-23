@@ -7,44 +7,45 @@
   <title>Sai Vidyaniketan School ERP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/app.css" />
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
 </head>
 <body>
-  <!-- Login -->
   <div id="login-view" class="login-page">
-    <div class="login-card">
-      <img class="login-logo" src="assets/logo.svg" alt="School logo" />
-      <h1 id="login-school">Sai Vidyaniketan School</h1>
-      <p class="motto" id="login-motto">Knowledge is Wisdom</p>
-      <form id="login-form">
-        <div class="form-row">
-          <label for="username">Username</label>
-          <input id="username" name="username" autocomplete="username" required value="admin" />
-        </div>
-        <div class="form-row">
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required value="Admin@123" />
-        </div>
-        <button class="btn btn-block" type="submit">Sign in</button>
-      </form>
-      <p class="hint">
-        Default login: <strong>admin / Admin@123</strong> (Principal)<br />
-        <span data-demo-badge class="hidden">Running in local demo mode (no Apps Script required)</span>
-        <span data-live-badge>Connected to school Google Sheet via Apps Script</span>
-      </p>
+    <div class="login-panel">
+      <div class="login-brand">
+        <img class="login-logo" src="assets/logo.svg" alt="School logo" />
+        <h1 id="login-school">Sai Vidyaniketan School</h1>
+        <p class="motto" id="login-motto">Knowledge is Wisdom</p>
+      </div>
+      <div class="login-form-wrap">
+        <form id="login-form">
+          <div class="form-row">
+            <label for="username">Username</label>
+            <input id="username" name="username" autocomplete="username" required value="admin" />
+          </div>
+          <div class="form-row">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required value="Admin@123" />
+          </div>
+          <button class="btn btn-block btn-dark" type="submit">Sign in</button>
+        </form>
+        <p class="hint">
+          <span data-demo-badge class="hidden">Demo mode · admin / Admin@123</span>
+          <span data-live-badge>School records via secure Apps Script</span>
+        </p>
+      </div>
     </div>
   </div>
 
-  <!-- App shell -->
   <div id="app-view" class="app-shell hidden">
-    <aside class="sidebar">
+    <aside class="sidebar" aria-label="Main">
       <div class="sidebar-brand">
         <img src="assets/logo.svg" alt="" />
         <div>
-          <div class="name" data-school-name>Sai Vidyaniketan</div>
+          <div class="name" data-school-short>SVS</div>
           <div class="sub">School ERP</div>
         </div>
       </div>
@@ -57,10 +58,10 @@
     </aside>
 
     <div class="main">
-      <header class="topbar">
+      <header class="workspace-bar">
         <img src="assets/logo.svg" alt="" />
-        <strong data-school-name>SVS</strong>
-        <span style="margin-left:auto;font-size:0.85rem" data-user-name></span>
+        <strong data-school-short>SVS</strong>
+        <span style="margin-left:auto;font-size:0.82rem;opacity:0.9" data-user-name></span>
       </header>
       <main class="content" id="app-content"></main>
     </div>

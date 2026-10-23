@@ -34,11 +34,14 @@ const Pages = (() => {
       const max = Math.max(1, ...classes.map((c) => d.enrollmentByClass[c]));
       root.innerHTML = `
         <div class="page-header">
-          <div><h2>Dashboard</h2><p>Academic year ${UI.esc(AppCache.get().academicYear)}</p></div>
-          <div class="toolbar">
-            <a class="btn" href="#/fees">Collect fee</a>
-            <a class="btn btn-dark" href="#/attendance">Mark attendance</a>
-            <a class="btn btn-ghost" href="#/students">Add student</a>
+          <div>
+            <h2>Dashboard</h2>
+            <p>${UI.esc(AppCache.school().name || "")} · Academic year ${UI.esc(AppCache.get().academicYear)}</p>
+          </div>
+          <div class="toolbar" style="margin:0">
+            <a class="btn btn-dark" href="#/fees">Collect fee</a>
+            <a class="btn" href="#/attendance">Attendance</a>
+            <a class="btn btn-ghost" href="#/students">New student</a>
             <a class="btn btn-accent" href="#/reminders">Reminders (${d.reminderCount || 0})</a>
           </div>
         </div>

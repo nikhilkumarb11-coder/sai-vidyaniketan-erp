@@ -24,6 +24,9 @@ const App = (() => {
     document.querySelectorAll("[data-school-name]").forEach((el) => {
       el.textContent = school.name || CONFIG.school.name;
     });
+    document.querySelectorAll("[data-school-short]").forEach((el) => {
+      el.textContent = school.shortName || CONFIG.school.shortName || "SVS";
+    });
     document.querySelectorAll("[data-user-name]").forEach((el) => {
       el.textContent = AppCache.user().displayName || AppCache.user().username;
     });

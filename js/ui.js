@@ -25,12 +25,12 @@ const UI = (() => {
       const backdrop = document.createElement("div");
       backdrop.className = "modal-backdrop";
       backdrop.innerHTML = `
-        <div class="modal" role="dialog">
+        <div class="modal" role="dialog" aria-modal="true">
           <h3>${esc(title)}</h3>
           <div class="modal-body">${body}</div>
           <div class="modal-actions">
             <button type="button" class="btn btn-ghost" data-cancel>Cancel</button>
-            <button type="button" class="btn" data-ok>${esc(submitLabel)}</button>
+            <button type="button" class="btn btn-dark" data-ok>${esc(submitLabel)}</button>
           </div>
         </div>`;
       document.body.appendChild(backdrop);
@@ -38,13 +38,19 @@ const UI = (() => {
         backdrop.remove();
         resolve(val);
       };
+      backdrop.addEventListener("click", (ev) => {
+        if (ev.target === backdrop) close(null);
+      });
       backdrop.querySelector("[data-cancel]").onclick = () => close(null);
       backdrop.querySelector("[data-ok]").onclick = async () => {
+        const okBtn = backdrop.querySelector("[data-ok]");
         if (onSubmit) {
           try {
+            okBtn.disabled = true;
             const result = await onSubmit(backdrop);
             close(result);
           } catch (e) {
+            okBtn.disabled = false;
             toast(e.message, "error");
           }
         } else close(true);

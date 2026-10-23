@@ -1,7 +1,7 @@
 const Api = (() => {
   const TOKEN_KEY = "svs_token";
   const cache = new Map();
-  const READ_TTL_MS = 45000; // reuse list/dashboard responses for 45s
+  const READ_TTL_MS = 90000; // reuse list/dashboard responses for 90s (perceived speed)
   const READ_ACTIONS = new Set([
     "bootstrap",
     "dashboard.principal",
@@ -127,8 +127,9 @@ const Api = (() => {
     if (READ_ACTIONS.has(action)) {
       cache.set(key, { at: Date.now(), data });
     } else {
-      // Mutations: drop related caches so next page load is fresh
+      // Mutations: drop API + page HTML caches so next paint is fresh
       invalidateAll();
+      if (typeof Router !== "undefined" && Router.invalidatePage) Router.invalidatePage();
     }
     return data;
   }

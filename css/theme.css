@@ -1,25 +1,39 @@
 :root {
   --primary: #1F8FD0;
+  --primary-soft: rgba(31, 143, 208, 0.12);
   --dark: #0E3A5F;
+  --dark-2: #0a2c48;
   --accent: #C62F45;
-  --bg: #FBF3E4;
+  --accent-soft: rgba(198, 47, 69, 0.1);
+  --bg: #F7F1E6;
+  --bg-2: #EFE6D6;
   --surface: #FFFFFF;
   --success: #2E9E6B;
-  --warning: #E0A030;
-  --text: #1a2b3c;
-  --muted: #5a6b7c;
-  --border: #e5ddd0;
-  --shadow: 0 8px 24px rgba(14, 58, 95, 0.08);
-  --radius: 14px;
-  --font-heading: "Playfair Display", Georgia, serif;
-  --font-body: "Poppins", system-ui, sans-serif;
-  --sidebar-w: 260px;
-  --topbar-h: 56px;
-  --bottom-h: 64px;
+  --warning: #C4891A;
+  --text: #142433;
+  --muted: #5C6B7A;
+  --border: rgba(14, 58, 95, 0.1);
+  --border-strong: rgba(14, 58, 95, 0.18);
+  --shadow: 0 1px 0 rgba(14, 58, 95, 0.04), 0 12px 32px rgba(14, 58, 95, 0.06);
+  --shadow-lg: 0 24px 60px rgba(8, 30, 50, 0.18);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-heading: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --sidebar-w: 248px;
+  --topbar-h: 58px;
+  --bottom-h: 68px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-* { box-sizing: border-box; }
-html, body {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
   min-height: 100%;
@@ -27,15 +41,43 @@ html, body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-h1, h2, h3, h4, .brand-font {
+
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(31, 143, 208, 0.08), transparent 55%),
+    radial-gradient(900px 400px at 100% 0%, rgba(198, 47, 69, 0.05), transparent 50%),
+    linear-gradient(180deg, #FBF6EC 0%, var(--bg) 40%, #F3EBD9 100%);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand-font {
   font-family: var(--font-heading);
   color: var(--dark);
   font-weight: 700;
-  margin: 0 0 0.4em;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35em;
+  line-height: 1.15;
 }
-a { color: var(--primary); }
-button, input, select, textarea {
+
+a {
+  color: var(--primary);
+}
+
+button,
+input,
+select,
+textarea {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--dark);
 }
