@@ -27,9 +27,7 @@ const App = (() => {
     document.querySelectorAll("[data-user-name]").forEach((el) => {
       el.textContent = AppCache.user().displayName || AppCache.user().username;
     });
-    document.querySelectorAll("[data-demo-badge]").forEach((el) => {
-      el.classList.toggle("hidden", !Api.useDemo());
-    });
+    updateModeBadges();
   }
 
   function wireLogin() {
@@ -63,10 +61,21 @@ const App = (() => {
     });
   }
 
+  function updateModeBadges() {
+    const demo = Api.useDemo();
+    document.querySelectorAll("[data-demo-badge]").forEach((el) => {
+      el.classList.toggle("hidden", !demo);
+    });
+    document.querySelectorAll("[data-live-badge]").forEach((el) => {
+      el.classList.toggle("hidden", demo);
+    });
+  }
+
   async function boot() {
     applyTheme();
     document.getElementById("login-motto").textContent = CONFIG.school.motto;
     document.getElementById("login-school").textContent = CONFIG.school.name;
+    updateModeBadges();
     wireLogin();
     wireLogout();
     Pages.registerAll();
