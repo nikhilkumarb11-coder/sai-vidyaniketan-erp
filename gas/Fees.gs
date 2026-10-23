@@ -177,7 +177,7 @@ function chequeUpdateStatus(payload, user) {
 
 function reminderQueue(payload, user) {
   requireRole_(user, ["Principal"]);
-  var pending = feesPending({}, user).data || [];
+  var pending = buildPendingList_();
   var today = nowIso_().slice(0, 10);
   var installments = readAllObjects_("Installments").filter(function (i) {
     return isTruthy_(i.active) && i.status !== "paid" && i.dueDate && i.dueDate <= today;
