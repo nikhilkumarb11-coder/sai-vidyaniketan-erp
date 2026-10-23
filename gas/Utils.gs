@@ -35,11 +35,41 @@ var SHEET_HEADERS = {
   AuditLog: ["id", "userId", "username", "action", "entity", "entityId", "details", "createdAt"]
 };
 
+/** Per-request memory cache — cleared at the start of each doGet/doPost */
+var REQUEST_CACHE_ = {};
+var SETTINGS_MEM_ = null;
+var CACHED_SHEETS_ = {
+  Students: 120,
+  StudentServices: 120,
+  FeePayments: 60,
+  Services: 300,
+  Settings: 300,
+  Classes: 300,
+  Exams: 300,
+  ExpenseCategories: 300,
+  Staff: 120,
+  StockItems: 120,
+  Enquiries: 60,
+  YearSummary: 600,
+  Notices: 120,
+  Routes: 300
+};
+
+function beginRequest_() {
+  REQUEST_CACHE_ = {};
+  SETTINGS_MEM_ = null;
+}
+
 function getSs_() {
-  return SpreadsheetApp.getActiveSpreadsheet();
+  if (!REQUEST_CACHE_.__ss) {
+    REQUEST_CACHE_.__ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+  return REQUEST_CACHE_.__ss;
 }
 
 function getSheet_(name) {
+  var key = "__sh_" + name;
+  if (REQUEST_CACHE_[key]) return REQUEST_CACHE_[key];
   var ss = getSs_();
   var sh = ss.getSheetByName(name);
   if (!sh) {
@@ -47,7 +77,16 @@ function getSheet_(name) {
     var headers = SHEET_HEADERS[name];
     if (headers) sh.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
+  REQUEST_CACHE_[key] = sh;
   return sh;
+}
+
+function invalidateSheetCache_(sheetName) {
+  delete REQUEST_CACHE_["rows_" + sheetName];
+  if (sheetName === "Settings") SETTINGS_MEM_ = null;
+  try {
+    CacheService.getScriptCache().remove("rows_" + sheetName);
+  } catch (e) {}
 }
 
 function uid_(prefix) {
@@ -114,15 +153,46 @@ function objectToRow_(headers, obj) {
 }
 
 function readAllObjects_(sheetName) {
+  var memKey = "rows_" + sheetName;
+  if (REQUEST_CACHE_[memKey]) return REQUEST_CACHE_[memKey];
+
+  var ttl = CACHED_SHEETS_[sheetName];
+  if (ttl) {
+    try {
+      var cached = CacheService.getScriptCache().get(memKey);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        REQUEST_CACHE_[memKey] = parsed;
+        return parsed;
+      }
+    } catch (e) {}
+  }
+
   var sh = getSheet_(sheetName);
-  var data = sh.getDataRange().getValues();
-  if (data.length < 2) return [];
+  var lastRow = sh.getLastRow();
+  var lastCol = sh.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) {
+    REQUEST_CACHE_[memKey] = [];
+    return REQUEST_CACHE_[memKey];
+  }
+  var data = sh.getRange(1, 1, lastRow, lastCol).getValues();
   var headers = data[0];
   var out = [];
   for (var r = 1; r < data.length; r++) {
     var obj = rowToObject_(headers, data[r]);
     obj._row = r + 1;
     out.push(obj);
+  }
+  REQUEST_CACHE_[memKey] = out;
+
+  if (ttl) {
+    try {
+      var payload = JSON.stringify(out);
+      // CacheService limit ~100KB per entry
+      if (payload.length < 90000) {
+        CacheService.getScriptCache().put(memKey, payload, ttl);
+      }
+    } catch (e2) {}
   }
   return out;
 }
@@ -134,6 +204,7 @@ function appendObject_(sheetName, obj) {
   if (!obj.createdAt) obj.createdAt = nowIso_();
   if (!obj.updatedAt) obj.updatedAt = obj.createdAt;
   sh.appendRow(objectToRow_(headers, obj));
+  invalidateSheetCache_(sheetName);
   return obj;
 }
 
@@ -154,6 +225,7 @@ function updateObjectById_(sheetName, id, patch) {
   for (var p in patch) merged[p] = patch[p];
   merged.updatedAt = nowIso_();
   sh.getRange(found._row, 1, 1, headers.length).setValues([objectToRow_(headers, merged)]);
+  invalidateSheetCache_(sheetName);
   return merged;
 }
 
@@ -166,17 +238,20 @@ function findById_(sheetName, id) {
 }
 
 function getSetting_(key, fallback) {
-  var rows = readAllObjects_("Settings");
-  for (var i = 0; i < rows.length; i++) {
-    if (rows[i].key === key) {
+  if (!SETTINGS_MEM_) {
+    SETTINGS_MEM_ = {};
+    var rows = readAllObjects_("Settings");
+    for (var i = 0; i < rows.length; i++) {
+      var raw = rows[i].value;
       try {
-        return JSON.parse(rows[i].value);
+        SETTINGS_MEM_[rows[i].key] = JSON.parse(raw);
       } catch (e) {
-        return rows[i].value;
+        SETTINGS_MEM_[rows[i].key] = raw;
       }
     }
   }
-  return fallback;
+  if (SETTINGS_MEM_[key] === undefined) return fallback;
+  return SETTINGS_MEM_[key];
 }
 
 function setSetting_(key, value) {
@@ -185,10 +260,12 @@ function setSetting_(key, value) {
   for (var i = 0; i < rows.length; i++) {
     if (rows[i].key === key) {
       getSheet_("Settings").getRange(rows[i]._row, 1, 1, 2).setValues([[key, str]]);
+      invalidateSheetCache_("Settings");
       return;
     }
   }
   getSheet_("Settings").appendRow([key, str]);
+  invalidateSheetCache_("Settings");
 }
 
 function withLock_(fn) {

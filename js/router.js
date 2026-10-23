@@ -86,7 +86,7 @@ const Router = (() => {
     const path = hash.split("?")[0];
     const entry = routes[path] || routes["#/dashboard"];
     const root = document.getElementById("app-content");
-    root.innerHTML = `<div class="card"><p>Loading…</p></div>`;
+    root.innerHTML = `<div class="card"><div class="loading-bar"></div><p style="margin:0.75rem 0 0;color:var(--muted)">Loading…</p></div>`;
     try {
       if (entry.principalOnly && !Auth.isPrincipal()) {
         root.innerHTML = `<div class="card"><p>You do not have access to this page.</p></div>`;

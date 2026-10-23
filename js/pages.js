@@ -325,8 +325,10 @@ const Pages = (() => {
   }
 
   async function feesPage(root) {
-    const pending = await Api.call("fees.pending", {});
-    const payments = await Api.call("fees.list", {});
+    const [pending, payments] = await Api.callAll([
+      { action: "fees.pending" },
+      { action: "fees.list" }
+    ]);
     root.innerHTML = `
       <div class="page-header"><div><h2>Fee collection</h2><p>Part-payments and receipts</p></div></div>
       <div class="card"><h3>Quick collect</h3>
@@ -590,8 +592,10 @@ const Pages = (() => {
   }
 
   async function whatsappPage(root) {
-    const pending = await Api.call("fees.pending", {});
-    const templates = await Api.call("messages.templates", {});
+    const [pending, templates] = await Api.callAll([
+      { action: "fees.pending" },
+      { action: "messages.templates" }
+    ]);
     root.innerHTML = `
       <div class="page-header"><div><h2>WhatsApp</h2><p>Click-to-send with templates</p></div></div>
       <div class="card">
@@ -988,9 +992,23 @@ const Pages = (() => {
   }
 
   async function financePage(root) {
-    const reports = await Api.call("finance.reports", {});
-    const yoy = await Api.call("finance.yoy", {});
-    const proj = await Api.call("finance.projections", {});
+    let reports, yoy, proj;
+    try {
+      const overview = await Api.call("finance.overview", {});
+      reports = overview.reports;
+      yoy = overview.yoy;
+      proj = overview.projections;
+    } catch (e) {
+      // Fallback if older Apps Script deployment without finance.overview
+      const triple = await Api.callAll([
+        { action: "finance.reports" },
+        { action: "finance.yoy" },
+        { action: "finance.projections" }
+      ]);
+      reports = triple[0];
+      yoy = triple[1];
+      proj = triple[2];
+    }
     root.innerHTML = `
       <div class="page-header"><div><h2>Finance</h2><p>Reports, YoY, projections</p></div>
         <button class="btn btn-ghost" id="export">Export summary CSV</button></div>
@@ -1073,8 +1091,10 @@ const Pages = (() => {
   }
 
   async function settingsPage(root) {
-    const modules = await Api.call("modules.get", {});
-    const services = await Api.call("services.list", { includeInactive: true });
+    const [modules, services] = await Api.callAll([
+      { action: "modules.get" },
+      { action: "services.list", payload: { includeInactive: true } }
+    ]);
     root.innerHTML = `
       <div class="page-header"><div><h2>Settings</h2><p>Modules & services</p></div>
         <button class="btn btn-ghost" id="backup">Backup now</button></div>

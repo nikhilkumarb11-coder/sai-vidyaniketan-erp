@@ -68,6 +68,7 @@ var ACTION_MAP = {
   "finance.reports": { fn: financeReports, auth: true },
   "finance.yoy": { fn: financeYoy, auth: true },
   "finance.projections": { fn: financeProjections, auth: true },
+  "finance.overview": { fn: financeOverview, auth: true },
   "budget.save": { fn: budgetSave, auth: true },
 
   "exams.list": { fn: examsList, auth: true },
@@ -102,6 +103,7 @@ function doPost(e) {
 }
 
 function handleRequest_(e, method) {
+  beginRequest_();
   try {
     var body = {};
     if (e && e.postData && e.postData.contents) {

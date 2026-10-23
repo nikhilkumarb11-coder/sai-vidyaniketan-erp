@@ -110,40 +110,7 @@ function feesCancel(payload, user) {
 
 function feesPending(payload, user) {
   requireRole_(user, ["Principal"]);
-  var students = readAllObjects_("Students").filter(function (s) {
-    return (s.status === "Active" || !s.status) && isTruthy_(s.active) !== false;
-  });
-  if (payload.className) {
-    students = students.filter(function (s) { return s.className === payload.className; });
-  }
-  var allPay = readAllObjects_("FeePayments");
-  var allSvc = readAllObjects_("StudentServices");
-  var out = students.map(function (s) {
-    var payments = allPay.filter(function (p) {
-      return p.studentId === s.id && !isTruthy_(p.cancelled);
-    });
-    var services = allSvc.filter(function (x) {
-      return x.studentId === s.id && isTruthy_(x.active);
-    });
-    var balance = studentBalance_(s, payments, services);
-    return {
-      id: s.id,
-      admissionNo: s.admissionNo,
-      name: s.name,
-      className: s.className,
-      section: s.section,
-      phone: s.phone,
-      parentName: s.parentName,
-      payByDate: s.payByDate,
-      balance: balance,
-      annualFee: Number(s.annualFee || 0)
-    };
-  }).filter(function (s) {
-    return s.balance > 0;
-  }).sort(function (a, b) {
-    return b.balance - a.balance;
-  });
-  return ok_(out);
+  return ok_(buildPendingList_(payload.className || ""));
 }
 
 function installmentsList(payload, user) {

@@ -405,6 +405,18 @@ table.data tr:hover td { background: #fcfaf6; }
 
 .hidden { display: none !important; }
 
+.loading-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--dark), var(--primary));
+  background-size: 200% 100%;
+  animation: loadingSlide 1s linear infinite;
+}
+@keyframes loadingSlide {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 @media (max-width: 860px) {
   .sidebar { display: none; }
   .main { margin-left: 0; padding-bottom: calc(var(--bottom-h) + 0.5rem); }
