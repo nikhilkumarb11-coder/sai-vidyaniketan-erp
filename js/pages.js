@@ -64,24 +64,33 @@ const Pages = (() => {
                 .join("")}
             </div>
           </div>
-          <div class="card dues-card">
-            <h3>Highest fees still due</h3>
-            <ul class="dues-list">
-              ${(d.fees.topDefaulters || []).length
-                ? (d.fees.topDefaulters || [])
-                    .map(
-                      (x) => `<li class="dues-row">
-                  <div class="dues-who">
-                    <span class="dues-name">${UI.esc(x.name)}</span>
-                    <span class="dues-class">Class ${UI.esc(x.className)}</span>
-                  </div>
-                  <span class="dues-amt">${UI.money(x.balance)}</span>
-                </li>`
-                    )
-                    .join("")
-                : `<li class="dues-empty">None</li>`}
-            </ul>
-            <p class="dues-foot">Spent this month: ${UI.money(d.expenseMonth)} · Fees collected this month: ${UI.money(d.fees.month)}</p>
+          <div class="card money-card">
+            <h3>Fees this month</h3>
+            ${(() => {
+              const collected = Number(d.fees.month) || 0;
+              const due = Number(d.fees.pendingTotal) || 0;
+              const scale = Math.max(collected + due, 1);
+              const cPct = Math.max(4, Math.round((collected / scale) * 100));
+              const dPct = Math.max(due ? 4 : 0, Math.round((due / scale) * 100));
+              return `<div class="money-bars">
+                <div class="money-bar-row">
+                  <span class="money-label">Collected</span>
+                  <div class="money-track"><div class="money-fill ok" style="width:${cPct}%"></div></div>
+                  <strong class="money-val ok">${UI.money(collected)}</strong>
+                </div>
+                <div class="money-bar-row">
+                  <span class="money-label">Still due</span>
+                  <div class="money-track"><div class="money-fill due" style="width:${dPct}%"></div></div>
+                  <strong class="money-val due">${UI.money(due)}</strong>
+                </div>
+              </div>
+              <div class="money-legend">
+                <span><i class="swatch ok"></i> In</span>
+                <span><i class="swatch due"></i> Due</span>
+              </div>
+              <p class="dues-foot">Spent this month: ${UI.money(d.expenseMonth)}</p>
+              <a class="btn btn-sm btn-ghost" href="#/fees" style="margin-top:0.5rem">Open fees due</a>`;
+            })()}
           </div>
         </div>
         <div class="grid grid-2">
@@ -92,7 +101,7 @@ const Pages = (() => {
           </div>`
               : ""
           }
-          <div class="card"><h3>Reminders</h3>
+          <div class="card"><h3>Store &amp; birthdays</h3>
             ${(d.lowStock || []).map((i) => `<div class="check-item"><span class="badge badge-warn">Low in store</span> ${UI.esc(i.name)} (${i.qty})</div>`).join("")}
             ${(d.birthdays || []).map((b) => `<div class="check-item"><span class="badge badge-info">Birthday</span> ${UI.esc(b.name)}</div>`).join("")}
             ${!(d.lowStock || []).length && !(d.birthdays || []).length ? "<p class='empty'>Nothing to show</p>" : ""}
@@ -1284,9 +1293,13 @@ const Pages = (() => {
         }));
       }
       root.innerHTML = `
-        <div class="page-header"><div><h2>Report cards</h2><p>Print mark sheets for the class</p></div>
-          <div class="toolbar"><select id="cls">${UI.classOptions(className)}</select>
-          <button class="btn" id="print">Print all</button></div></div>
+        <div class="page-header page-header-compact">
+          <div><h2>Report cards</h2><p>Print mark sheets for the class</p></div>
+        </div>
+        <div class="toolbar toolbar-compact sticky-tools">
+          <select id="cls">${UI.classOptions(className)}</select>
+          <button class="btn" id="print">Print all</button>
+        </div>
         <div id="cards">${
           (data.cards || []).length
             ? data.cards.map((c) => reportCardHtml(c, data)).join("")
@@ -1339,12 +1352,16 @@ const Pages = (() => {
     const render = async () => {
       const rows = await Api.call("timetable.get", { className });
       root.innerHTML = `
-        <div class="page-header"><div><h2>Timetable</h2><p>Class periods for the week</p></div>
-          <div class="toolbar"><select id="cls">${UI.classOptions(className)}</select>
-          ${Auth.isPrincipal() ? `<button class="btn" id="add">Add period</button>` : ""}</div></div>
+        <div class="page-header page-header-compact">
+          <div><h2>Timetable</h2><p>Class periods for the week</p></div>
+        </div>
+        <div class="toolbar toolbar-compact sticky-tools">
+          <select id="cls">${UI.classOptions(className)}</select>
+          ${Auth.isPrincipal() ? `<button class="btn" id="add">Add period</button>` : ""}
+        </div>
         <div class="card table-wrap"><table class="data"><thead><tr><th>Day</th><th>Period</th><th>Subject</th></tr></thead>
         <tbody>${rows
-          .map((r) => `<tr><td>${UI.esc(r.day)}</td><td>${UI.esc(r.period)}</td><td>${UI.esc(r.subject)}</td></tr>`)
+          .map((r) => `<tr><td data-label="Day">${UI.esc(r.day)}</td><td data-label="Period">${UI.esc(r.period)}</td><td data-label="Subject">${UI.esc(r.subject)}</td></tr>`)
           .join("") || `<tr><td colspan="3" class="empty">No periods yet</td></tr>`}</tbody></table></div>`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
@@ -1462,24 +1479,90 @@ const Pages = (() => {
   }
 
   async function certificatesPage(root) {
-    const students = await Api.call("students.list", {});
-    root.innerHTML = `
-      <div class="page-header"><div><h2>Certificates</h2><p>Bonafide, transfer certificate, or student ID</p></div></div>
-      <div class="card">
-        <div class="form-grid">
-          <div class="form-row"><label>Student</label><select id="stu">${(students || [])
-            .map((s) => `<option value="${s.id}">${UI.esc(s.name)} (${UI.esc(s.className)})</option>`)
-            .join("")}</select></div>
-          <div class="form-row"><label>Certificate type</label><select id="type"><option value="Bonafide">Bonafide</option><option value="TC">Transfer (TC)</option><option value="ID">Student ID</option></select></div>
-        </div>
-        <button class="btn" id="issue">Make & print</button>
-      </div>`;
-    root.querySelector("#issue").onclick = async () => {
-      const type = root.querySelector("#type").value;
-      const cert = await Api.call("certificates.issue", {
-        studentId: root.querySelector("#stu").value,
-        type
+    const students = (await Api.call("students.list", {})) || [];
+    let selectedId = students[0] ? students[0].id : "";
+    const labelOf = (s) => `${s.name} · ${s.className} · ${s.admissionNo || ""}`;
+
+    const renderPicker = (q) => {
+      const qLower = String(q || "").trim().toLowerCase();
+      const hits = students.filter((s) => {
+        if (!qLower) return true;
+        return [s.name, s.className, s.admissionNo, s.phone, s.parentName]
+          .map((x) => String(x || "").toLowerCase())
+          .some((t) => t.includes(qLower));
+      }).slice(0, 40);
+      const list = root.querySelector("#stu-list");
+      if (!list) return;
+      list.innerHTML = hits.length
+        ? hits
+            .map(
+              (s) =>
+                `<button type="button" class="stu-pick ${s.id === selectedId ? "active" : ""}" data-id="${s.id}">${UI.esc(
+                  labelOf(s)
+                )}</button>`
+            )
+            .join("")
+        : `<p class="empty" style="padding:0.5rem">No match</p>`;
+      list.querySelectorAll("[data-id]").forEach((btn) => {
+        btn.onclick = () => {
+          selectedId = btn.dataset.id;
+          const s = students.find((x) => x.id === selectedId);
+          root.querySelector("#stu-search").value = s ? labelOf(s) : "";
+          list.classList.add("hidden");
+          renderPicker(root.querySelector("#stu-search").value);
+        };
       });
+    };
+
+    root.innerHTML = `
+      <div class="page-header page-header-compact">
+        <div><h2>Certificates</h2><p>Bonafide, transfer certificate, or student ID</p></div>
+      </div>
+      <div class="card">
+        <div class="form-grid cert-form">
+          <div class="form-row" style="grid-column:1/-1">
+            <label>Student (type to search)</label>
+            <div class="stu-combo">
+              <input id="stu-search" type="search" placeholder="Name, class or admission no." autocomplete="off"
+                value="${selectedId ? UI.esc(labelOf(students.find((s) => s.id === selectedId) || {})) : ""}" />
+              <div id="stu-list" class="stu-list hidden"></div>
+            </div>
+          </div>
+          <div class="form-row"><label>Certificate type</label>
+            <select id="type"><option value="Bonafide">Bonafide</option><option value="TC">Transfer (TC)</option><option value="ID">Student ID</option></select>
+          </div>
+        </div>
+        <button class="btn" id="issue" style="margin-top:0.75rem">Make &amp; print</button>
+      </div>`;
+
+    const search = root.querySelector("#stu-search");
+    const list = root.querySelector("#stu-list");
+    search.addEventListener("focus", () => {
+      list.classList.remove("hidden");
+      renderPicker(search.value);
+    });
+    search.addEventListener("input", () => {
+      list.classList.remove("hidden");
+      selectedId = "";
+      renderPicker(search.value);
+    });
+    document.addEventListener(
+      "click",
+      (e) => {
+        if (!root.contains(e.target)) return;
+        if (!e.target.closest(".stu-combo")) list.classList.add("hidden");
+      },
+      true
+    );
+
+    root.querySelector("#issue").onclick = async () => {
+      if (!selectedId) {
+        UI.toast("Pick a student from the list", "error");
+        search.focus();
+        return;
+      }
+      const type = root.querySelector("#type").value;
+      const cert = await Api.call("certificates.issue", { studentId: selectedId, type });
       const s = cert.student || {};
       const school = cert.school || AppCache.school();
       UI.printHtml(`
@@ -1501,7 +1584,6 @@ const Pages = (() => {
       yoy = overview.yoy;
       proj = overview.projections;
     } catch (e) {
-      // Fallback if older Apps Script deployment without finance.overview
       const triple = await Api.callAll([
         { action: "finance.reports" },
         { action: "finance.yoy" },
@@ -1511,62 +1593,203 @@ const Pages = (() => {
       yoy = triple[1];
       proj = triple[2];
     }
-    root.innerHTML = `
-      <div class="page-header"><div><h2>Accounts</h2><p>Money in, money out, and year outlook</p></div>
-        <button class="btn btn-ghost" id="export">Download summary</button></div>
-      <div class="grid grid-4">
-        <div class="stat"><div class="label">Money in</div><div class="value ok">${UI.money(reports.income)}</div></div>
-        <div class="stat"><div class="label">Money out</div><div class="value">${UI.money(reports.expenses)}</div></div>
-        <div class="stat"><div class="label">Left over</div><div class="value">${UI.money(reports.surplus)}</div></div>
-        <div class="stat"><div class="label">Fees collected %</div><div class="value">${reports.receivables.efficiency}%</div></div>
-      </div>
-      <div class="grid grid-2" style="margin-top:1rem">
-        <div class="card"><h3>Compared with past years</h3>
+
+    const currentYear = (yoy && yoy.currentYear) || (AppCache.get() && AppCache.get().academicYear) || "";
+    const prevYears = (yoy && yoy.previousYears) || {};
+    const yearKeys = [currentYear, ...Object.keys(prevYears)].filter(Boolean);
+    let viewYear = currentYear;
+
+    const snapshotFor = (year) => {
+      if (year === currentYear) {
+        return {
+          year,
+          feeCollected: reports.income,
+          expenses: reports.expenses,
+          pendingBalance: reports.receivables.pending,
+          enrollment: (yoy.current && yoy.current.enrollment) || "—",
+          surplus: reports.surplus,
+          efficiency: reports.receivables.efficiency,
+          byMode: reports.byMode || {},
+          isCurrent: true
+        };
+      }
+      const y = prevYears[year] || {};
+      return {
+        year,
+        feeCollected: y.feeCollected || 0,
+        expenses: y.expenses || 0,
+        pendingBalance: y.pendingBalance || 0,
+        enrollment: y.enrollment || "—",
+        surplus: (y.feeCollected || 0) - (y.expenses || 0),
+        efficiency: null,
+        byMode: {},
+        isCurrent: false
+      };
+    };
+
+    const render = () => {
+      const snap = snapshotFor(viewYear);
+      const scale = Math.max(snap.feeCollected + snap.expenses, 1);
+      const inPct = Math.max(4, Math.round((snap.feeCollected / scale) * 100));
+      const outPct = Math.max(snap.expenses ? 4 : 0, Math.round((snap.expenses / scale) * 100));
+      const modeEntries = Object.entries(snap.byMode);
+      const modeMax = Math.max(1, ...modeEntries.map(([, v]) => Number(v) || 0));
+
+      root.innerHTML = `
+        <div class="page-header page-header-compact">
+          <div><h2>Accounts</h2><p>Money in, money out, and year outlook</p></div>
+        </div>
+        <div class="toolbar toolbar-compact sticky-tools">
+          <select id="acct-year" aria-label="Academic year">
+            ${yearKeys
+              .map((y) => `<option value="${UI.esc(y)}" ${y === viewYear ? "selected" : ""}>${UI.esc(y)}${
+                y === currentYear ? " (current)" : ""
+              }</option>`)
+              .join("")}
+          </select>
+          <button type="button" class="btn btn-ghost" id="print-year">Print letterhead</button>
+          <button type="button" class="btn btn-ghost" id="export">Download CSV</button>
+        </div>
+        <div class="grid grid-4 stats-row">
+          <div class="stat"><div class="label">Money in</div><div class="value ok">${UI.money(snap.feeCollected)}</div></div>
+          <div class="stat"><div class="label">Money out</div><div class="value">${UI.money(snap.expenses)}</div></div>
+          <div class="stat"><div class="label">Left over</div><div class="value">${UI.money(snap.surplus)}</div></div>
+          <div class="stat"><div class="label">${snap.isCurrent ? "Fees collected %" : "Students"}</div>
+            <div class="value">${snap.isCurrent ? snap.efficiency + "%" : snap.enrollment}</div></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:1rem">
+          <div class="card money-card">
+            <h3>In vs out · ${UI.esc(snap.year)}</h3>
+            <div class="money-bars">
+              <div class="money-bar-row">
+                <span class="money-label">In</span>
+                <div class="money-track"><div class="money-fill ok" style="width:${inPct}%"></div></div>
+                <strong class="money-val ok">${UI.money(snap.feeCollected)}</strong>
+              </div>
+              <div class="money-bar-row">
+                <span class="money-label">Out</span>
+                <div class="money-track"><div class="money-fill due" style="width:${outPct}%"></div></div>
+                <strong class="money-val due">${UI.money(snap.expenses)}</strong>
+              </div>
+            </div>
+            <p class="dues-foot">Still due: ${UI.money(snap.pendingBalance)}</p>
+          </div>
+          <div class="card">
+            <h3>${snap.isCurrent ? "Year-end outlook" : "Year notes"}</h3>
+            ${
+              snap.isCurrent
+                ? `<p>Expected fees by year end: <strong>${UI.money(proj.expectedYearEndCollection)}</strong></p>
+            <p>Expected still due: ${UI.money(proj.expectedPending)}</p>
+            <p>Expected spending: ${UI.money(proj.expenseForecast)}</p>
+            <p>Expected left over: <strong>${UI.money(proj.projectedSurplus)}</strong></p>
+            <p style="color:var(--muted);font-size:0.8rem">${UI.esc(proj.note)}</p>`
+                : `<p>Past year summary from Upload list / year close.</p>
+            <p>Fees collected: <strong>${UI.money(snap.feeCollected)}</strong></p>
+            <p>Spending: <strong>${UI.money(snap.expenses)}</strong></p>
+            <p>Pending at close: ${UI.money(snap.pendingBalance)}</p>`
+            }
+          </div>
+        </div>
+        ${
+          snap.isCurrent && modeEntries.length
+            ? `<div class="card" style="margin-top:1rem"><h3>Fees by payment type</h3>
+          <div class="mode-bars">
+            ${modeEntries
+              .map(([k, v]) => {
+                const w = Math.max(4, Math.round((Number(v) / modeMax) * 100));
+                return `<div class="money-bar-row">
+                  <span class="money-label">${UI.esc(k)}</span>
+                  <div class="money-track"><div class="money-fill ok" style="width:${w}%"></div></div>
+                  <strong class="money-val">${UI.money(v)}</strong>
+                </div>`;
+              })
+              .join("")}
+          </div></div>`
+            : ""
+        }
+        ${
+          snap.isCurrent
+            ? `<div class="card" style="margin-top:1rem"><h3>Compared with past years</h3>
           <p>Fees vs average: <strong>${UI.money(yoy.aheadBehind.collection)}</strong></p>
           <p>Spending vs average: <strong>${UI.money(yoy.aheadBehind.expenses)}</strong></p>
           <p style="color:var(--muted);font-size:0.85rem">Past average fees collected ${UI.money(yoy.averagePrevious.feeCollected)}</p>
-        </div>
-        <div class="card"><h3>Year-end outlook</h3>
-          <p>Expected fees by year end: <strong>${UI.money(proj.expectedYearEndCollection)}</strong></p>
-          <p>Expected still due: ${UI.money(proj.expectedPending)}</p>
-          <p>Expected spending: ${UI.money(proj.expenseForecast)}</p>
-          <p>Expected left over: <strong>${UI.money(proj.projectedSurplus)}</strong></p>
-          <p style="color:var(--muted);font-size:0.8rem">${UI.esc(proj.note)}</p>
-        </div>
-      </div>
-      <div class="card"><h3>Fees by payment type</h3>
-        <div class="table-wrap"><table class="data"><tbody>
-          ${Object.keys(reports.byMode)
-            .map((k) => `<tr><td>${UI.esc(k)}</td><td>${UI.money(reports.byMode[k])}</td></tr>`)
-            .join("")}
-        </tbody></table></div></div>`;
-    root.querySelector("#export").onclick = () => {
-      UI.downloadCsv("finance_summary.csv", [
-        ["Metric", "Value"],
-        ["Income", reports.income],
-        ["Expenses", reports.expenses],
-        ["Surplus", reports.surplus],
-        ["Pending", reports.receivables.pending],
-        ["Projected collection", proj.expectedYearEndCollection]
-      ]);
+        </div>`
+            : ""
+        }`;
+
+      root.querySelector("#acct-year").onchange = (e) => {
+        viewYear = e.target.value;
+        render();
+      };
+      root.querySelector("#export").onclick = () => {
+        UI.downloadCsv("accounts_" + snap.year + ".csv", [
+          ["Metric", "Value"],
+          ["Academic year", snap.year],
+          ["Money in", snap.feeCollected],
+          ["Money out", snap.expenses],
+          ["Left over", snap.surplus],
+          ["Pending", snap.pendingBalance],
+          ...(snap.isCurrent
+            ? [
+                ["Collection %", snap.efficiency],
+                ["Projected collection", proj.expectedYearEndCollection]
+              ]
+            : [["Enrollment", snap.enrollment]])
+        ]);
+      };
+      root.querySelector("#print-year").onclick = () => {
+        const school = AppCache.school();
+        UI.printHtml(`
+          <div class="print-doc">
+            ${officialDocHeader(school, "Accounts report · " + snap.year)}
+            <h3 style="margin:1.25rem 0 0.75rem">Summary</h3>
+            <table class="data">
+              <tbody>
+                <tr><td>Money in (fees)</td><td>${UI.money(snap.feeCollected)}</td></tr>
+                <tr><td>Money out (spending)</td><td>${UI.money(snap.expenses)}</td></tr>
+                <tr><td>Left over</td><td>${UI.money(snap.surplus)}</td></tr>
+                <tr><td>Fees still due</td><td>${UI.money(snap.pendingBalance)}</td></tr>
+                ${
+                  snap.isCurrent
+                    ? `<tr><td>Collection %</td><td>${snap.efficiency}%</td></tr>`
+                    : `<tr><td>Enrollment</td><td>${UI.esc(String(snap.enrollment))}</td></tr>`
+                }
+              </tbody>
+            </table>
+            ${
+              snap.isCurrent && modeEntries.length
+                ? `<h3 style="margin:1.25rem 0 0.75rem">By payment type</h3>
+              <table class="data"><tbody>
+                ${modeEntries.map(([k, v]) => `<tr><td>${UI.esc(k)}</td><td>${UI.money(v)}</td></tr>`).join("")}
+              </tbody></table>`
+                : ""
+            }
+            <p style="margin-top:2rem;color:var(--muted);font-size:0.85rem">Generated ${new Date().toLocaleString()}</p>
+            <div class="ribbon">${UI.esc(school.motto || CONFIG.school.motto || "")}</div>
+          </div>`);
+      };
     };
+
+    render();
   }
 
   async function importPage(root) {
     root.innerHTML = `
-      <div class="page-header"><div><h2>Upload list</h2><p>Paste a spreadsheet list to add many rows at once</p></div></div>
-      <div class="grid grid-2">
+      <div class="page-header page-header-compact">
+        <div><h2>Upload list</h2><p>For setup only — paste a spreadsheet to add many rows at once</p></div>
+      </div>
+      <div class="grid grid-2 import-grid">
         <div class="card">
           <h3>Student list</h3>
-          <p style="font-size:0.85rem;color:var(--muted)">First line must be: name,parentName,phone,className,annualFee,previousBalance</p>
+          <p class="import-hint">First line must be: name,parentName,phone,className,annualFee,previousBalance</p>
           <textarea id="stuCsv" rows="8" placeholder="name,parentName,phone,className,annualFee,previousBalance&#10;Riya,Suresh,9876501234,3,22000,0"></textarea>
-          <button class="btn" id="impStu" style="margin-top:0.75rem">Upload students</button>
+          <button class="btn btn-block" id="impStu" style="margin-top:0.75rem">Upload students</button>
         </div>
         <div class="card">
           <h3>Past year totals</h3>
-          <p style="font-size:0.85rem;color:var(--muted)">First line must be: academicYear,month,feeCollected,expenses,enrollment,pendingBalance</p>
+          <p class="import-hint">First line must be: academicYear,month,feeCollected,expenses,enrollment,pendingBalance</p>
           <textarea id="yrCsv" rows="8" placeholder="academicYear,month,feeCollected,expenses,enrollment,pendingBalance&#10;2023-24,YEAR,4000000,3000000,220,250000"></textarea>
-          <button class="btn" id="impYr" style="margin-top:0.75rem">Upload year totals</button>
+          <button class="btn btn-block" id="impYr" style="margin-top:0.75rem">Upload year totals</button>
         </div>
       </div>`;
     const parse = (text) => {
@@ -1598,6 +1821,12 @@ const Pages = (() => {
       { action: "services.list", payload: { includeInactive: true } },
       { action: "settings.get" }
     ]);
+    let exams = [];
+    try {
+      exams = (await Api.call("exams.list", {})) || [];
+    } catch (e) {
+      exams = [];
+    }
     const modules = { ...CONFIG.modulesDefault, ...(modulesRaw || {}) };
     const fees = { ...CONFIG.classFees, ...(settings.classFees || AppCache.classFees() || {}) };
     const subjectsMap = {
@@ -1618,9 +1847,44 @@ const Pages = (() => {
       finance: "Accounts"
     };
 
+    const openExamForm = async (existing) => {
+      const e = existing || {};
+      await UI.modal({
+        title: existing ? "Edit test" : "Add test",
+        submitLabel: "Save",
+        body: `<div class="form-grid">
+          <div class="form-row"><label>Test name *</label><input name="name" value="${UI.esc(e.name || "")}" required placeholder="e.g. Slip Test 1"></div>
+          <div class="form-row"><label>Max marks *</label><input name="maxMarks" type="number" min="1" value="${e.maxMarks != null ? e.maxMarks : 25}"></div>
+          <div class="form-row"><label>Weight %</label><input name="weight" type="number" min="0" value="${e.weight != null ? e.weight : 25}"></div>
+          <div class="form-row"><label>Order</label><input name="order" type="number" min="1" value="${e.order != null ? e.order : exams.length + 1}"></div>
+        </div>`,
+        onSubmit: async (b) => {
+          const name = UI.formVal(b, "name").trim();
+          const maxMarks = Number(UI.formVal(b, "maxMarks"));
+          if (!name || !maxMarks) {
+            UI.toast("Name and max marks are required", "error");
+            return false;
+          }
+          await Api.call("exams.save", {
+            id: e.id,
+            name,
+            maxMarks,
+            weight: Number(UI.formVal(b, "weight")) || 0,
+            order: Number(UI.formVal(b, "order")) || 1,
+            active: true
+          });
+          UI.toast(existing ? "Test updated" : "Test added", "ok");
+          settingsPage(root);
+          return true;
+        }
+      });
+    };
+
     root.innerHTML = `
-      <div class="page-header"><div><h2>Settings</h2><p>Turn features on/off and set fees</p></div>
-        <button class="btn btn-ghost" id="backup">Save backup</button></div>
+      <div class="page-header page-header-inline">
+        <div><h2>Settings</h2><p>Turn features on/off, set fees and tests</p></div>
+        <button class="btn btn-ghost" id="backup">Save backup</button>
+      </div>
       <div class="card"><h3>Features</h3>
         ${Object.keys(modules)
           .map(
@@ -1629,6 +1893,26 @@ const Pages = (() => {
           )
           .join("")}
         <button class="btn" id="saveMod" style="margin-top:1rem">Save features</button>
+      </div>
+      <div class="card"><h3>Tests &amp; max marks</h3>
+        <p class="import-hint">Used on the Marks screen. Max marks stops entry above the limit (e.g. 25).</p>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Test</th><th>Max</th><th>Weight %</th><th>Order</th><th></th></tr></thead>
+        <tbody>${
+          exams.length
+            ? exams
+                .map(
+                  (e) => `<tr>
+              <td data-label="Test">${UI.esc(e.name)}</td>
+              <td data-label="Max">${UI.esc(e.maxMarks)}</td>
+              <td data-label="Weight %">${UI.esc(e.weight)}</td>
+              <td data-label="Order">${UI.esc(e.order)}</td>
+              <td class="row-actions"><button type="button" class="btn btn-sm btn-ghost" data-edit-exam="${e.id}">Edit</button></td>
+            </tr>`
+                )
+                .join("")
+            : `<tr><td colspan="5" class="empty">No tests yet — add Slip Test / Final below</td></tr>`
+        }</tbody></table></div>
+        <button class="btn" id="addExam" style="margin-top:0.75rem">+ Add test</button>
       </div>
       <div class="card"><h3>Yearly fee by class</h3>
         <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Yearly fee (₹)</th></tr></thead>
@@ -1672,6 +1956,14 @@ const Pages = (() => {
       AppCache.set(boot);
       Router.renderNav();
     };
+
+    root.querySelector("#addExam").onclick = () => openExamForm(null);
+    root.querySelectorAll("[data-edit-exam]").forEach((btn) => {
+      btn.onclick = () => {
+        const exam = exams.find((x) => x.id === btn.dataset.editExam);
+        if (exam) openExamForm(exam);
+      };
+    });
 
     root.querySelector("#saveMod").onclick = async () => {
       const m = { ...CONFIG.modulesDefault };
