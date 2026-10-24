@@ -2099,36 +2099,52 @@ body.receipt-viewer-open {
   min-width: 0;
 }
 
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 150px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: 0.2rem 0 0;
-  overflow: hidden;
-}
-
-.chart-bars .bar-wrap {
-  flex: 1 1 0;
+.class-strength {
   display: flex;
   flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.class-strength-row {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) 1.5rem;
   align-items: center;
-  height: 100%;
-  justify-content: flex-end;
+  gap: 0.45rem;
   min-width: 0;
 }
 
-.chart-bars .bar {
-  width: 100%;
-  max-width: 20px;
-  background: #4477aa;
-  border-radius: 4px 4px 2px 2px;
-  min-height: 4px;
-  opacity: 0.92;
-  flex: 0 0 auto;
+.class-strength-name {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.class-strength-track {
+  height: 10px;
+  background: var(--bg-elevated, #eef2f7);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.class-strength-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 0;
+  transition: width 0.25s ease;
+}
+
+.class-strength-n {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .dash-mid {
@@ -2221,32 +2237,6 @@ body.receipt-viewer-open {
   .dash-focus-grid {
     grid-template-columns: 1fr;
   }
-}
-
-.chart-bars .bar-count {
-  font-size: 0.58rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1;
-  margin-bottom: 0.2rem;
-  flex: 0 0 auto;
-}
-
-.chart-bars .lbl {
-  margin-top: 0.25rem;
-  width: 100%;
-  max-width: 100%;
-  font-size: 0.5rem;
-  font-weight: 650;
-  color: var(--muted);
-  text-align: center;
-  line-height: 1.1;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  max-height: 2.3em;
-  overflow: hidden;
-  flex: 0 0 auto;
 }
 
 .dash-mid {

@@ -2,7 +2,7 @@
   "name": "Sai Vidyaniketan School ERP",
   "short_name": "SVS ERP",
   "description": "School ERP for Sai Vidyaniketan — students, fees, attendance, and reports.",
-  "start_url": "./index.html?v=37",
+  "start_url": "./index.html?v=38",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",

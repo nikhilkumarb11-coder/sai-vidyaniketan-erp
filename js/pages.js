@@ -80,15 +80,17 @@ const Pages = (() => {
         <div class="grid grid-2 dash-mid" style="margin-top:1rem">
           <div class="card chart-card">
             <h3>Students in each class</h3>
-            <div class="chart-bars">
+            <div class="class-strength" role="img" aria-label="Students in each class">
               ${classes
                 .map((c, i) => {
                   const n = enrollment[c] || 0;
-                  const h = Math.max(8, Math.round((n / max) * 100));
+                  const w = Math.max(n ? 6 : 0, Math.round((n / max) * 100));
                   const color = barPalette[i % barPalette.length];
-                  return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl" title="${UI.esc(
-                    c
-                  )}">${UI.esc(c)}</div></div>`;
+                  return `<div class="class-strength-row">
+                    <span class="class-strength-name">${UI.esc(c)}</span>
+                    <div class="class-strength-track"><div class="class-strength-fill" style="width:${w}%;background:${color}"></div></div>
+                    <span class="class-strength-n">${n}</span>
+                  </div>`;
                 })
                 .join("")}
             </div>
