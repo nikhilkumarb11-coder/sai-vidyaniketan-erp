@@ -36,21 +36,21 @@ const Pages = (() => {
         Object.keys(enrollment).filter((c) => !classOrder.some((o) => UI.classMatch(o, c)))
       );
       const max = Math.max(1, ...classes.map((c) => enrollment[c] || 0));
-      /* Soft categorical palette — even lightness so the chart reads as one set */
+      /* Paul Tol–style muted set — distinct but calm on a light card */
       const barPalette = [
-        "#5B8DEF",
-        "#4DB6AC",
-        "#F0A05A",
-        "#9B8CFF",
-        "#6FCF97",
-        "#E88B9A",
-        "#6BB3D9",
-        "#C9A227",
-        "#8E9AAF",
-        "#D4A5FF",
-        "#7BC8A4",
-        "#E7A87C",
-        "#7AA2E3"
+        "#4477AA",
+        "#66CCEE",
+        "#228833",
+        "#CCBB44",
+        "#EE6677",
+        "#AA3377",
+        "#BBBBBB",
+        "#44AA99",
+        "#882255",
+        "#999933",
+        "#332288",
+        "#DDCC77",
+        "#88CCEE"
       ];
       const absentees = Number((d.attendanceToday && d.attendanceToday.absentees) || 0);
       const defaulters = (d.fees && d.fees.topDefaulters) || [];
