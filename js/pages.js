@@ -78,19 +78,21 @@ const Pages = (() => {
           <div class="stat"><div class="label">Present today</div><div class="value">${presentPct}</div></div>
         </div>
         <div class="grid grid-2 dash-mid" style="margin-top:1rem">
-          <div class="card">
+          <div class="card chart-card">
             <h3>Students in each class</h3>
-            <div class="chart-bars">
-              ${classes
-                .map((c, i) => {
-                  const n = enrollment[c] || 0;
-                  const h = Math.max(8, Math.round((n / max) * 100));
-                  const color = barPalette[i % barPalette.length];
-                  return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl" title="${UI.esc(
-                    c
-                  )}">${UI.esc(c)}</div></div>`;
-                })
-                .join("")}
+            <div class="chart-bars-scroller">
+              <div class="chart-bars" style="--bar-count:${Math.max(classes.length, 1)}">
+                ${classes
+                  .map((c, i) => {
+                    const n = enrollment[c] || 0;
+                    const h = Math.max(8, Math.round((n / max) * 100));
+                    const color = barPalette[i % barPalette.length];
+                    return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl" title="${UI.esc(
+                      c
+                    )}">${UI.esc(c)}</div></div>`;
+                  })
+                  .join("")}
+              </div>
             </div>
           </div>
           <div class="card money-card">

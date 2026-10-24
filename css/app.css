@@ -2094,13 +2094,30 @@ body.receipt-viewer-open {
   word-break: break-word;
 }
 
+.chart-card {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.chart-bars-scroller {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.15rem;
+}
+
 .chart-bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 200px;
-  padding: 0.35rem 0.25rem 0;
-  overflow: visible;
+  gap: 0.35rem;
+  height: 168px;
+  min-width: 100%;
+  width: max(100%, calc(var(--bar-count, 8) * 2.35rem));
+  box-sizing: border-box;
+  padding: 0.25rem 0.15rem 0;
+  overflow: hidden;
 }
 
 .chart-bars .bar-wrap {
@@ -2110,8 +2127,8 @@ body.receipt-viewer-open {
   align-items: center;
   height: 100%;
   justify-content: flex-end;
-  min-width: 1.6rem;
-  padding-bottom: 2.6rem;
+  min-width: 2rem;
+  max-width: 3rem;
   position: relative;
 }
 
@@ -2122,6 +2139,7 @@ body.receipt-viewer-open {
   border-radius: 4px 4px 2px 2px;
   min-height: 4px;
   opacity: 0.92;
+  flex: 0 0 auto;
 }
 
 .dash-mid {
@@ -2221,23 +2239,37 @@ body.receipt-viewer-open {
   font-weight: 700;
   color: var(--ink);
   line-height: 1;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
+  flex: 0 0 auto;
 }
 
 .chart-bars .lbl {
-  position: absolute;
-  left: 50%;
-  bottom: 0.15rem;
-  font-size: 0.68rem;
-  font-weight: 600;
+  position: static;
+  transform: none;
+  margin-top: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.58rem;
+  font-weight: 650;
   color: var(--muted);
-  white-space: nowrap;
-  transform: translateX(-30%) rotate(-40deg);
-  transform-origin: left center;
-  max-width: none;
-  overflow: visible;
-  line-height: 1;
-  pointer-events: none;
+  text-align: center;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+  max-height: 2.4em;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.dash-mid {
+  min-width: 0;
+}
+
+.dash-mid > .card {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .skeleton-page {
