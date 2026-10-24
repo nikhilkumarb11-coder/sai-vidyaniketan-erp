@@ -4,19 +4,34 @@ const Router = (() => {
 
   const GROUPS = [
     {
-      id: "ops",
-      title: "Operations",
-      paths: ["#/dashboard", "#/students", "#/enquiries", "#/fees", "#/pending", "#/reminders", "#/attendance", "#/whatsapp"]
+      id: "home",
+      title: "Overview",
+      paths: ["#/dashboard"]
     },
     {
-      id: "admin",
-      title: "Admin & finance",
-      paths: ["#/expenses", "#/staff", "#/stock", "#/transport", "#/finance", "#/import", "#/certificates"]
+      id: "people",
+      title: "People",
+      paths: ["#/students", "#/enquiries", "#/attendance"]
+    },
+    {
+      id: "fees",
+      title: "Fees",
+      paths: ["#/fees"]
     },
     {
       id: "academics",
       title: "Academics",
       paths: ["#/exams", "#/reportcards", "#/timetable", "#/notices"]
+    },
+    {
+      id: "comms",
+      title: "Communication",
+      paths: ["#/whatsapp"]
+    },
+    {
+      id: "admin",
+      title: "Admin",
+      paths: ["#/expenses", "#/staff", "#/stock", "#/transport", "#/certificates", "#/finance", "#/import"]
     },
     {
       id: "system",
@@ -36,10 +51,10 @@ const Router = (() => {
     items.push({ path: "#/dashboard", label: "Dashboard", icon: "⌂", roles: ["Principal", "Teacher"] });
     if (principal) {
       items.push({ path: "#/students", label: "Students", icon: "👤", roles: ["Principal"] });
-      items.push({ path: "#/enquiries", label: "Enquiries", icon: "✉", roles: ["Principal"] });
+      if (m.enquiries !== false) {
+        items.push({ path: "#/enquiries", label: "Enquiries", icon: "✉", roles: ["Principal"] });
+      }
       items.push({ path: "#/fees", label: "Fees", icon: "₹", roles: ["Principal"] });
-      items.push({ path: "#/pending", label: "Pending", icon: "⚠", roles: ["Principal"] });
-      items.push({ path: "#/reminders", label: "Reminders", icon: "🔔", roles: ["Principal"] });
     }
     items.push({ path: "#/attendance", label: "Attendance", icon: "✓", roles: ["Principal", "Teacher"] });
     if (principal && m.whatsapp !== false) {
@@ -59,7 +74,7 @@ const Router = (() => {
     }
     if (m.exams !== false) {
       items.push({ path: "#/exams", label: "Exams", icon: "📝", roles: ["Principal", "Teacher"] });
-      items.push({ path: "#/reportcards", label: "Reports", icon: "📄", roles: ["Principal", "Teacher"] });
+      items.push({ path: "#/reportcards", label: "Report cards", icon: "📄", roles: ["Principal", "Teacher"] });
     }
     if (m.timetable !== false) {
       items.push({ path: "#/timetable", label: "Timetable", icon: "📅", roles: ["Principal", "Teacher"] });
@@ -120,7 +135,6 @@ const Router = (() => {
         </a>`;
       });
     });
-    // Any leftover items not in groups
     const grouped = new Set(GROUPS.flatMap((g) => g.paths));
     const rest = items.filter((i) => !grouped.has(i.path));
     if (rest.length) {
@@ -160,7 +174,6 @@ const Router = (() => {
     const bottom = document.getElementById("bottom-nav");
     const hash = location.hash || "#/dashboard";
 
-    // Grouped sidebar
     const byPath = Object.fromEntries(items.map((i) => [i.path, i]));
     let sideHtml = "";
     GROUPS.forEach((g) => {

@@ -20,9 +20,15 @@ const AppCache = (() => {
     const m = modules();
     return m[key] !== false;
   }
+  function classFees() {
+    return (data && data.classFees) || CONFIG.classFees || {};
+  }
+  function subjectsByClass() {
+    return (data && data.subjectsByClass) || CONFIG.subjectsByClass || {};
+  }
   function clear() {
     data = null;
   }
 
-  return { set, get, user, modules, school, isModuleOn, clear };
+  return { set, get, user, modules, school, isModuleOn, classFees, subjectsByClass, clear };
 })();

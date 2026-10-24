@@ -983,6 +983,25 @@ table.data tbody tr:last-child td {
   margin-top: 0.1rem;
 }
 
+.field-hint {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 560;
+}
+
+.tpl-preview {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  min-height: 4.5rem;
+}
+
 .row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1071,11 +1090,27 @@ table.data tbody tr:last-child td {
 }
 
 .chart-bars .bar {
+  position: relative;
   width: 100%;
   max-width: 28px;
   background: linear-gradient(180deg, var(--primary), #1E3A8A);
   border-radius: 5px 5px 2px 2px;
   min-height: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.chart-bars .bar-count {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  font-weight: 750;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .chart-bars .lbl {

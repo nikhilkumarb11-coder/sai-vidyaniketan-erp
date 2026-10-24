@@ -20,7 +20,7 @@ const UI = (() => {
       .replace(/"/g, "&quot;");
   }
 
-  function modal({ title, body, onSubmit, submitLabel = "Save" }) {
+  function modal({ title, body, onSubmit, submitLabel = "Save", onReady }) {
     return new Promise((resolve) => {
       const backdrop = document.createElement("div");
       backdrop.className = "modal-backdrop";
@@ -55,7 +55,29 @@ const UI = (() => {
           }
         } else close(true);
       };
+      if (typeof onReady === "function") {
+        try {
+          onReady(backdrop);
+        } catch (e) {}
+      }
     });
+  }
+
+  function ageFromDob(dob) {
+    if (!dob) return "";
+    const d = new Date(String(dob).slice(0, 10) + "T12:00:00");
+    if (Number.isNaN(d.getTime())) return "";
+    const now = new Date();
+    let years = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) years -= 1;
+    if (years < 0) return "";
+    return years + (years === 1 ? " year" : " years");
+  }
+
+  function digitsOnly(s, max) {
+    const d = String(s || "").replace(/\D/g, "");
+    return max ? d.slice(0, max) : d;
   }
 
   function formVal(root, name) {
@@ -146,6 +168,8 @@ const UI = (() => {
     fillTemplate,
     normalizeClass,
     classMatch,
-    pickClassWithStudents
+    pickClassWithStudents,
+    ageFromDob,
+    digitsOnly
   };
 })();

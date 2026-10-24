@@ -154,6 +154,7 @@ function requireRole_(user, roles) {
 
 function buildBootstrap_(user) {
   var modules = getSetting_("modules", {
+    enquiries: true,
     transport: false,
     stock: true,
     exams: true,
@@ -176,6 +177,8 @@ function buildBootstrap_(user) {
   var templates = getSetting_("whatsappTemplates", {});
   var school = getSetting_("school", {});
   var theme = getSetting_("theme", {});
+  var classFees = getSetting_("classFees", {});
+  var subjectsByClass = getSetting_("subjectsByClass", {});
 
   var serverTime = nowIso_();
   return {
@@ -189,6 +192,8 @@ function buildBootstrap_(user) {
     whatsappTemplates: templates,
     school: school,
     theme: theme,
+    classFees: classFees,
+    subjectsByClass: subjectsByClass,
     expenseCategories: readAllObjects_("ExpenseCategories").filter(function (c) {
       return isTruthy_(c.active);
     }),

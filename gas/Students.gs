@@ -11,6 +11,8 @@ function settingsGet(payload, user) {
     grading: getSetting_("grading", []),
     lateFine: getSetting_("lateFine", {}),
     whatsappTemplates: getSetting_("whatsappTemplates", {}),
+    classFees: getSetting_("classFees", {}),
+    subjectsByClass: getSetting_("subjectsByClass", {}),
     academicYear: currentAcademicYear_(),
     openingCash: getSetting_("openingCash", 0),
     openingBank: getSetting_("openingBank", 0)
@@ -19,7 +21,18 @@ function settingsGet(payload, user) {
 
 function settingsSave(payload, user) {
   requireRole_(user, ["Principal"]);
-  var keys = ["school", "theme", "grading", "lateFine", "whatsappTemplates", "academicYear", "openingCash", "openingBank"];
+  var keys = [
+    "school",
+    "theme",
+    "grading",
+    "lateFine",
+    "whatsappTemplates",
+    "classFees",
+    "subjectsByClass",
+    "academicYear",
+    "openingCash",
+    "openingBank"
+  ];
   keys.forEach(function (k) {
     if (payload[k] !== undefined) setSetting_(k, payload[k]);
   });

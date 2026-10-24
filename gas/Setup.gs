@@ -52,6 +52,7 @@ function setup() {
     warning: "#E0A030"
   });
   setSetting_("modules", {
+    enquiries: true,
     transport: false,
     stock: true,
     exams: true,

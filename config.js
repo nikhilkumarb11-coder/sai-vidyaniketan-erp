@@ -86,6 +86,7 @@ const CONFIG = {
     remarksLabels: ["Class Teacher", "Principal"]
   },
   modulesDefault: {
+    enquiries: true,
     transport: false,
     stock: true,
     exams: true,

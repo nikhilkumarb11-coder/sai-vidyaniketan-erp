@@ -7,8 +7,8 @@ const Pages = (() => {
     Router.register("#/students", studentsPage, { principalOnly: true });
     Router.register("#/enquiries", enquiriesPage, { principalOnly: true });
     Router.register("#/fees", feesPage, { principalOnly: true });
-    Router.register("#/pending", pendingPage, { principalOnly: true });
-    Router.register("#/reminders", remindersPage, { principalOnly: true });
+    Router.register("#/pending", (root) => feesPage(root, { tab: "pending" }), { principalOnly: true });
+    Router.register("#/reminders", (root) => feesPage(root, { tab: "reminders" }), { principalOnly: true });
     Router.register("#/attendance", attendancePage);
     Router.register("#/whatsapp", whatsappPage, { principalOnly: true });
     Router.register("#/expenses", expensesPage, { principalOnly: true });
@@ -56,9 +56,11 @@ const Pages = (() => {
             <h3>Class-wise enrollment</h3>
             <div class="chart-bars">
               ${classes
-                .map(
-                  (c) => `<div class="bar-wrap"><div class="bar" style="height:${Math.round((d.enrollmentByClass[c] / max) * 100)}%"></div><div class="lbl">${UI.esc(c)}<br>${d.enrollmentByClass[c]}</div></div>`
-                )
+                .map((c) => {
+                  const n = d.enrollmentByClass[c];
+                  const h = Math.max(8, Math.round((n / max) * 100));
+                  return `<div class="bar-wrap"><div class="bar" style="height:${h}%"><span class="bar-count">${n}</span></div><div class="lbl">${UI.esc(c)}</div></div>`;
+                })
                 .join("")}
             </div>
           </div>
@@ -72,9 +74,13 @@ const Pages = (() => {
           </div>
         </div>
         <div class="grid grid-2">
-          <div class="card"><h3>Open enquiries</h3>
+          ${
+            AppCache.isModuleOn("enquiries")
+              ? `<div class="card"><h3>Open enquiries</h3>
             ${(d.enquiries || []).map((e) => `<div class="check-item"><span>${UI.esc(e.name)} · ${UI.esc(e.classSought)}</span><a class="btn btn-sm btn-ghost" href="#/enquiries">Open</a></div>`).join("") || "<p class='empty'>No open enquiries</p>"}
-          </div>
+          </div>`
+              : ""
+          }
           <div class="card"><h3>Alerts</h3>
             ${(d.lowStock || []).map((i) => `<div class="check-item"><span class="badge badge-warn">Low stock</span> ${UI.esc(i.name)} (${i.qty})</div>`).join("")}
             ${(d.birthdays || []).map((b) => `<div class="check-item"><span class="badge badge-info">Birthday</span> ${UI.esc(b.name)}</div>`).join("")}
@@ -151,21 +157,27 @@ const Pages = (() => {
   async function openStudentForm(existing, onDone) {
     const services = await Api.call("services.list", {});
     const s = existing || {};
+    const fees = AppCache.classFees();
+    const defaultClass = s.className || "1";
     await UI.modal({
       title: existing ? "Edit student" : "New admission",
       submitLabel: "Save",
       body: `
         <div class="form-grid">
-          <div class="form-row"><label>Name</label><input name="name" value="${UI.esc(s.name || "")}" required></div>
-          <div class="form-row"><label>Class</label><select name="className">${UI.classOptions(s.className || "1")}</select></div>
-          <div class="form-row"><label>Parent / Guardian</label><input name="parentName" value="${UI.esc(s.parentName || "")}"></div>
-          <div class="form-row"><label>Phone</label><input name="phone" value="${UI.esc(s.phone || "")}"></div>
-          <div class="form-row"><label>Annual fee</label><input name="annualFee" type="number" value="${s.annualFee || CONFIG.classFees[s.className || "1"] || 20000}"></div>
-          <div class="form-row"><label>Concession</label><input name="concession" type="number" value="${s.concession || 0}"></div>
+          <div class="form-row"><label>Name *</label><input name="name" value="${UI.esc(s.name || "")}" required maxlength="80"></div>
+          <div class="form-row"><label>Class *</label><select name="className">${UI.classOptions(defaultClass)}</select></div>
+          <div class="form-row"><label>Parent / Guardian *</label><input name="parentName" value="${UI.esc(s.parentName || "")}" maxlength="80"></div>
+          <div class="form-row"><label>Phone * (10 digits)</label>
+            <input name="phone" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" value="${UI.esc(UI.digitsOnly(s.phone || "", 10))}" placeholder="10-digit mobile">
+          </div>
+          <div class="form-row"><label>Annual fee *</label><input name="annualFee" type="number" min="0" step="1" value="${s.annualFee != null ? s.annualFee : fees[defaultClass] || 20000}"></div>
+          <div class="form-row"><label>Concession</label><input name="concession" type="number" min="0" step="1" value="${s.concession || 0}"></div>
           <div class="form-row"><label>Concession reason</label><input name="concessionReason" value="${UI.esc(s.concessionReason || "")}"></div>
           <div class="form-row"><label>Pay-by date</label><input name="payByDate" type="date" value="${UI.esc(s.payByDate || "")}"></div>
           <div class="form-row"><label>Gender</label><select name="gender"><option value="">—</option><option ${s.gender==="M"?"selected":""}>M</option><option ${s.gender==="F"?"selected":""}>F</option></select></div>
-          <div class="form-row"><label>DOB</label><input name="dob" type="date" value="${UI.esc(s.dob || "")}"></div>
+          <div class="form-row"><label>DOB</label><input name="dob" type="date" value="${UI.esc(s.dob || "")}" max="${new Date().toISOString().slice(0, 10)}">
+            <div class="field-hint" data-age>${s.dob ? "Age: " + UI.ageFromDob(s.dob) : "Age appears after DOB"}</div>
+          </div>
           <div class="form-row" style="grid-column:1/-1"><label>Address</label><input name="address" value="${UI.esc(s.address || "")}"></div>
           <div class="form-row" style="grid-column:1/-1"><label>Sibling group ID (optional)</label><input name="siblingGroupId" value="${UI.esc(s.siblingGroupId || "")}" placeholder="Same ID links siblings"></div>
         </div>
@@ -178,12 +190,49 @@ const Pages = (() => {
           .join("")}
         <h4 style="margin:1rem 0 0.5rem">Installments (optional)</h4>
         <div class="form-grid">
-          <div class="form-row"><label>Term 1 due</label><input name="inst1date" type="date"><input name="inst1amt" type="number" placeholder="Amount" style="margin-top:0.35rem"></div>
-          <div class="form-row"><label>Term 2 due</label><input name="inst2date" type="date"><input name="inst2amt" type="number" placeholder="Amount" style="margin-top:0.35rem"></div>
-          <div class="form-row"><label>Term 3 due</label><input name="inst3date" type="date"><input name="inst3amt" type="number" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 1 due</label><input name="inst1date" type="date"><input name="inst1amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 2 due</label><input name="inst2date" type="date"><input name="inst2amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 3 due</label><input name="inst3date" type="date"><input name="inst3amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
         </div>`,
+      onReady: (backdrop) => {
+        const phone = backdrop.querySelector("[name=phone]");
+        const dob = backdrop.querySelector("[name=dob]");
+        const ageEl = backdrop.querySelector("[data-age]");
+        const classSel = backdrop.querySelector("[name=className]");
+        const feeInput = backdrop.querySelector("[name=annualFee]");
+        phone.addEventListener("input", () => {
+          phone.value = UI.digitsOnly(phone.value, 10);
+        });
+        const syncAge = () => {
+          const a = UI.ageFromDob(dob.value);
+          ageEl.textContent = a ? "Age: " + a : "Age appears after DOB";
+        };
+        dob.addEventListener("change", syncAge);
+        dob.addEventListener("input", syncAge);
+        if (!existing) {
+          classSel.addEventListener("change", () => {
+            const map = AppCache.classFees();
+            if (map[classSel.value] != null) feeInput.value = map[classSel.value];
+          });
+        }
+      },
       onSubmit: async (backdrop) => {
         const f = (n) => UI.formVal(backdrop, n);
+        const phone = UI.digitsOnly(f("phone"), 10);
+        const name = f("name").trim();
+        const parentName = f("parentName").trim();
+        const annualFee = Number(f("annualFee"));
+        const concession = Number(f("concession") || 0);
+        if (!name) throw new Error("Name is required");
+        if (!parentName) throw new Error("Parent / guardian is required");
+        if (!/^\d{10}$/.test(phone)) throw new Error("Phone must be exactly 10 digits");
+        if (!(annualFee >= 0)) throw new Error("Annual fee must be 0 or more");
+        if (concession < 0) throw new Error("Concession cannot be negative");
+        if (concession > annualFee) throw new Error("Concession cannot exceed annual fee");
+        if (f("dob")) {
+          const dob = new Date(f("dob") + "T12:00:00");
+          if (dob > new Date()) throw new Error("Date of birth cannot be in the future");
+        }
         const opted = [];
         backdrop.querySelectorAll("[name^=svc_]:checked").forEach((el) => {
           opted.push({ serviceId: el.name.replace("svc_", ""), serviceName: el.dataset.name, cost: Number(el.dataset.cost) });
@@ -195,12 +244,12 @@ const Pages = (() => {
           if (d && a) installments.push({ label: "Term " + i, dueDate: d, amount: a });
         }
         const payload = {
-          name: f("name"),
+          name,
           className: f("className"),
-          parentName: f("parentName"),
-          phone: f("phone"),
-          annualFee: Number(f("annualFee")),
-          concession: Number(f("concession")),
+          parentName,
+          phone,
+          annualFee,
+          concession,
           concessionReason: f("concessionReason"),
           payByDate: f("payByDate"),
           gender: f("gender"),
@@ -210,7 +259,6 @@ const Pages = (() => {
           services: opted,
           installments
         };
-        if (!payload.name) throw new Error("Name required");
         if (existing) await Api.call("students.update", { id: existing.id, ...payload });
         else await Api.call("students.create", payload);
         UI.toast("Student saved", "ok");
@@ -308,6 +356,10 @@ const Pages = (() => {
   }
 
   async function enquiriesPage(root) {
+    if (!AppCache.isModuleOn("enquiries")) {
+      root.innerHTML = `<div class="card"><p>Enquiries module is turned off. Enable it under Settings → Modules.</p></div>`;
+      return;
+    }
     const list = await Api.call("enquiries.list", {});
     root.innerHTML = `
       <div class="page-header"><div><h2>Enquiries</h2><p>Pre-admission tracking</p></div>
@@ -326,14 +378,23 @@ const Pages = (() => {
         title: "New enquiry",
         body: `<div class="form-grid">
           <div class="form-row"><label>Name</label><input name="name"></div>
-          <div class="form-row"><label>Phone</label><input name="phone"></div>
+          <div class="form-row"><label>Phone (10 digits)</label><input name="phone" inputmode="numeric" maxlength="10"></div>
           <div class="form-row"><label>Class sought</label><select name="classSought">${UI.classOptions("1")}</select></div>
           <div class="form-row"><label>Follow-up</label><input name="followUpDate" type="date"></div>
           <div class="form-row" style="grid-column:1/-1"><label>Notes</label><input name="notes"></div></div>`,
+        onReady: (b) => {
+          const phone = b.querySelector("[name=phone]");
+          phone.addEventListener("input", () => {
+            phone.value = UI.digitsOnly(phone.value, 10);
+          });
+        },
         onSubmit: async (b) => {
+          const phone = UI.digitsOnly(UI.formVal(b, "phone"), 10);
+          if (!UI.formVal(b, "name").trim()) throw new Error("Name is required");
+          if (!/^\d{10}$/.test(phone)) throw new Error("Phone must be exactly 10 digits");
           await Api.call("enquiries.create", {
-            name: UI.formVal(b, "name"),
-            phone: UI.formVal(b, "phone"),
+            name: UI.formVal(b, "name").trim(),
+            phone,
             classSought: UI.formVal(b, "classSought"),
             followUpDate: UI.formVal(b, "followUpDate"),
             notes: UI.formVal(b, "notes")
@@ -352,11 +413,13 @@ const Pages = (() => {
     });
   }
 
-  async function feesPage(root) {
-    const [pending, payments, students] = await Api.callAll([
+  async function feesPage(root, state = {}) {
+    const allowed = ["collect", "pending", "reminders", "receipts"];
+    const [pending, payments, students, reminderQueue] = await Api.callAll([
       { action: "fees.pending" },
       { action: "fees.list" },
-      { action: "students.list", payload: { includeAllStatuses: true } }
+      { action: "students.list", payload: { includeAllStatuses: true } },
+      { action: "reminders.queue" }
     ]);
     const byId = {};
     (students || []).forEach((s) => {
@@ -366,13 +429,18 @@ const Pages = (() => {
       .slice()
       .reverse()
       .map((p) => ({ ...p, student: byId[p.studentId] || {} }));
+    const reminders = reminderQueue || [];
 
-    let tab = "collect";
+    let tab = allowed.includes(state.tab) ? state.tab : "collect";
     let q = "";
+    let remindIdx = 0;
     const isCancelled = (p) => {
       const v = p && p.cancelled;
       return v === true || v === "TRUE" || v === "true" || v === "Y" || v === 1 || v === "1";
     };
+    const feeTpl = () =>
+      (AppCache.get() && AppCache.get().whatsappTemplates && AppCache.get().whatsappTemplates.feeReminder) ||
+      CONFIG.whatsappTemplates.feeReminder;
 
     const matchesQ = (...parts) => {
       const qLower = q.trim().toLowerCase();
@@ -387,6 +455,9 @@ const Pages = (() => {
       const pendingFiltered = (pending || []).filter((s) =>
         matchesQ(s.name, s.admissionNo, s.className, s.phone)
       );
+      const remindersFiltered = reminders.filter((s) =>
+        matchesQ(s.name, s.className, s.phone, ...(s.reasons || []))
+      );
       const receipts = allReceipts.filter((p) =>
         matchesQ(p.student.name, p.student.admissionNo, p.receiptNo, p.student.className)
       );
@@ -398,8 +469,8 @@ const Pages = (() => {
           <tbody>${
             pendingFiltered.length
               ? pendingFiltered
-                .map(
-                  (s) => `<tr>
+                  .map(
+                    (s) => `<tr>
                 <td data-label="Student">${UI.esc(s.name)}</td>
                 <td data-label="Class">${UI.esc(s.className)}</td>
                 <td data-label="Balance">${UI.money(s.balance)}</td>
@@ -408,6 +479,78 @@ const Pages = (() => {
                   .join("")
               : `<tr><td colspan="4" class="empty">No matching students with balance</td></tr>`
           }</tbody></table></div>`;
+
+      const pendingHtml = `
+        <div class="toolbar" style="margin-top:0">
+          <button type="button" class="btn btn-ghost" id="export-pending">Export CSV</button>
+        </div>
+        <div class="card table-wrap"><table class="data">
+          <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Balance</th><th></th></tr></thead>
+          <tbody>${
+            pendingFiltered.length
+              ? pendingFiltered
+                  .map(
+                    (s) => `<tr>
+              <td data-label="Name">${UI.esc(s.name)}</td>
+              <td data-label="Class">${UI.esc(s.className)}</td>
+              <td data-label="Phone">${UI.esc(s.phone)}</td>
+              <td data-label="Pay by">${UI.esc(s.payByDate || "—")}</td>
+              <td data-label="Balance">${UI.money(s.balance)}</td>
+              <td class="row-actions">
+                <button class="btn btn-sm" data-fee="${s.id}">Collect</button>
+                <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(
+                  s.phone,
+                  UI.fillTemplate(feeTpl(), {
+                    parentName: s.parentName,
+                    studentName: s.name,
+                    class: s.className,
+                    balance: s.balance,
+                    schoolName: AppCache.school().name
+                  })
+                )}">WhatsApp</a>
+              </td></tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="6" class="empty">No pending fees</td></tr>`
+          }</tbody></table></div>`;
+
+      if (remindIdx >= remindersFiltered.length) remindIdx = Math.max(0, remindersFiltered.length - 1);
+      const cur = remindersFiltered[remindIdx];
+      const remindersHtml = `
+        <div class="card">
+          ${
+            cur
+              ? `<h3>${UI.esc(cur.name)} · ${UI.esc(cur.className)}</h3>
+            <p>Balance ${UI.money(cur.balance)}</p>
+            <p>${(cur.reasons || []).map((r) => `<span class="badge badge-warn">${UI.esc(r)}</span> `).join("")}</p>
+            <div class="toolbar">
+              <a class="btn" id="wa-remind" target="_blank" rel="noopener" href="${UI.waLink(
+                cur.phone,
+                UI.fillTemplate(feeTpl(), {
+                  parentName: cur.parentName,
+                  studentName: cur.name,
+                  class: cur.className,
+                  balance: cur.balance,
+                  schoolName: AppCache.school().name
+                })
+              )}">WhatsApp parent</a>
+              <button class="btn btn-ghost" id="next-remind">Next parent →</button>
+            </div>
+            <p style="color:var(--muted)">${remindIdx + 1} of ${remindersFiltered.length}</p>`
+              : `<p class="empty">Reminder queue empty</p>`
+          }
+        </div>
+        <div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Name</th><th>Balance</th><th>Why</th></tr></thead>
+        <tbody>${remindersFiltered
+          .map(
+            (x, i) =>
+              `<tr ${i === remindIdx ? 'style="background:var(--primary-soft)"' : ""}>
+                <td data-label="#">${i + 1}</td>
+                <td data-label="Name">${UI.esc(x.name)}</td>
+                <td data-label="Balance">${UI.money(x.balance)}</td>
+                <td data-label="Why">${UI.esc((x.reasons || []).join("; "))}</td></tr>`
+          )
+          .join("") || `<tr><td colspan="4" class="empty">None</td></tr>`}</tbody></table></div>`;
 
       const receiptsHtml = `
         <div class="card table-wrap"><table class="data">
@@ -447,22 +590,27 @@ const Pages = (() => {
               : `<tr><td colspan="6" class="empty">No matching receipts</td></tr>`
           }</tbody></table></div>`;
 
+      const panel =
+        tab === "receipts"
+          ? receiptsHtml
+          : tab === "pending"
+            ? pendingHtml
+            : tab === "reminders"
+              ? remindersHtml
+              : collectHtml;
+
       root.innerHTML = `
-        <div class="page-header"><div><h2>Fee collection</h2><p>Part-payments and receipts</p></div></div>
+        <div class="page-header"><div><h2>Fees</h2><p>Collect, pending, reminders & receipts</p></div></div>
         <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}" aria-selected="${
-            tab === "collect"
-          }">Quick collect (${pendingFiltered.length})</button>
-          <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}" aria-selected="${
-            tab === "receipts"
-          }">Recent receipts (${receipts.length})</button>
+          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}">Collect (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="pending" class="${tab === "pending" ? "active" : ""}">Pending (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="reminders" class="${tab === "reminders" ? "active" : ""}">Reminders (${remindersFiltered.length})</button>
+          <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}">Receipts (${receipts.length})</button>
         </div>
         <div class="toolbar">
-          <input name="q" type="search" placeholder="Search student name / admission / receipt" value="${UI.esc(
-            q
-          )}" autocomplete="off" />
+          <input name="q" type="search" placeholder="Search student name / admission / receipt" value="${UI.esc(q)}" autocomplete="off" />
         </div>
-        <div id="fees-panel">${tab === "receipts" ? receiptsHtml : collectHtml}</div>`;
+        <div id="fees-panel">${panel}</div>`;
 
       root.querySelectorAll("[data-tab]").forEach((btn) => {
         btn.onclick = () => render({ tab: btn.dataset.tab });
@@ -474,22 +622,49 @@ const Pages = (() => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => render({ q: searchInput.value, keepFocus: true }), 180);
       };
-      searchInput.onkeydown = (ev) => {
-        if (ev.key === "Enter") {
-          clearTimeout(searchTimer);
-          render({ q: searchInput.value, keepFocus: true });
-        }
-      };
       if (keepFocus) {
         searchInput.focus();
-        const len = searchInput.value.length;
         try {
-          searchInput.setSelectionRange(len, len);
+          searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
         } catch (_) {}
       }
 
+      const reload = () => feesPage(root, { tab });
       root.querySelectorAll("[data-fee]").forEach((b) => {
-        b.onclick = () => openCollectFee(b.dataset.fee, () => feesPage(root));
+        b.onclick = () => openCollectFee(b.dataset.fee, reload);
+      });
+      root.querySelector("#export-pending")?.addEventListener("click", () => {
+        UI.downloadCsv("pending_fees.csv", [
+          ["Name", "Class", "Phone", "Balance"],
+          ...pendingFiltered.map((s) => [s.name, s.className, s.phone, s.balance])
+        ]);
+      });
+      root.querySelector("#next-remind")?.addEventListener("click", async () => {
+        if (!cur) return;
+        const msg = UI.fillTemplate(feeTpl(), {
+          parentName: cur.parentName,
+          studentName: cur.name,
+          class: cur.className,
+          balance: cur.balance,
+          schoolName: AppCache.school().name
+        });
+        await Api.call("whatsapp.log", {
+          type: "feeReminder",
+          studentId: cur.studentId,
+          phone: cur.phone,
+          message: msg
+        });
+        remindIdx++;
+        render({});
+      });
+      root.querySelector("#wa-remind")?.addEventListener("click", async () => {
+        if (!cur) return;
+        await Api.call("whatsapp.log", {
+          type: "feeReminder",
+          studentId: cur.studentId,
+          phone: cur.phone,
+          message: "fee reminder"
+        });
       });
       root.querySelectorAll("[data-view]").forEach((b) => {
         b.onclick = () => viewReceipt(receiptById[b.dataset.view]);
@@ -502,7 +677,7 @@ const Pages = (() => {
           const reason = prompt("Cancel reason?");
           if (!reason) return;
           await Api.call("fees.cancel", { id: b.dataset.cancel, reason });
-          feesPage(root);
+          reload();
         };
       });
       root.querySelectorAll("[data-cheque]").forEach((b) => {
@@ -511,112 +686,11 @@ const Pages = (() => {
           if (!status) return;
           await Api.call("cheque.updateStatus", { id: b.dataset.cheque, chequeStatus: status });
           UI.toast("Cheque updated", "ok");
-          feesPage(root);
+          reload();
         };
       });
     };
 
-    render();
-  }
-
-  async function pendingPage(root) {
-    const className = "";
-    const list = await Api.call("fees.pending", { className });
-    root.innerHTML = `
-      <div class="page-header"><div><h2>Pending fees</h2><p>Defaulters</p></div>
-        <button class="btn btn-ghost" id="export">Export CSV</button></div>
-      <div class="card table-wrap"><table class="data">
-        <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Balance</th><th></th></tr></thead>
-        <tbody>${list
-          .map(
-            (s) => `<tr><td>${UI.esc(s.name)}</td><td>${UI.esc(s.className)}</td><td>${UI.esc(s.phone)}</td>
-            <td>${UI.esc(s.payByDate)}</td><td>${UI.money(s.balance)}</td>
-            <td><button class="btn btn-sm" data-fee="${s.id}">Collect</button>
-            <a class="btn btn-sm btn-ghost" target="_blank" href="${UI.waLink(
-              s.phone,
-              UI.fillTemplate(CONFIG.whatsappTemplates.feeReminder, {
-                parentName: s.parentName,
-                studentName: s.name,
-                class: s.className,
-                balance: s.balance,
-                schoolName: AppCache.school().name
-              })
-            )}">WhatsApp</a></td></tr>`
-          )
-          .join("")}</tbody></table></div>`;
-    root.querySelector("#export").onclick = () => {
-      UI.downloadCsv("pending_fees.csv", [
-        ["Name", "Class", "Phone", "Balance"],
-        ...list.map((s) => [s.name, s.className, s.phone, s.balance])
-      ]);
-    };
-    root.querySelectorAll("[data-fee]").forEach((b) => {
-      b.onclick = () => openCollectFee(b.dataset.fee, () => pendingPage(root));
-    });
-  }
-
-  async function remindersPage(root) {
-    const list = await Api.call("reminders.queue", {});
-    let idx = 0;
-    const render = () => {
-      const cur = list[idx];
-      root.innerHTML = `
-        <div class="page-header"><div><h2>Reminder queue</h2><p>Due / overdue fee follow-ups</p></div></div>
-        <div class="card">
-          ${
-            cur
-              ? `<h3>${UI.esc(cur.name)} · ${UI.esc(cur.className)}</h3>
-            <p>Balance ${UI.money(cur.balance)}</p>
-            <p>${(cur.reasons || []).map((r) => `<span class="badge badge-warn">${UI.esc(r)}</span> `).join("")}</p>
-            <div class="toolbar">
-              <a class="btn" id="wa" target="_blank" href="${UI.waLink(
-                cur.phone,
-                UI.fillTemplate(CONFIG.whatsappTemplates.feeReminder, {
-                  parentName: cur.parentName,
-                  studentName: cur.name,
-                  class: cur.className,
-                  balance: cur.balance,
-                  schoolName: AppCache.school().name
-                })
-              )}">WhatsApp parent</a>
-              <button class="btn btn-ghost" id="next">Next parent →</button>
-            </div>
-            <p style="color:var(--muted)">${idx + 1} of ${list.length}</p>`
-              : `<p class="empty">Queue empty</p>`
-          }
-        </div>
-        <div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Name</th><th>Balance</th><th>Why</th></tr></thead>
-        <tbody>${list
-          .map(
-            (x, i) =>
-              `<tr ${i === idx ? 'style="background:#e5f3fb"' : ""}><td>${i + 1}</td><td>${UI.esc(x.name)}</td><td>${UI.money(x.balance)}</td><td>${UI.esc((x.reasons || []).join("; "))}</td></tr>`
-          )
-          .join("")}</tbody></table></div>`;
-      const next = root.querySelector("#next");
-      if (next)
-        next.onclick = async () => {
-          const msg = UI.fillTemplate(CONFIG.whatsappTemplates.feeReminder, {
-            parentName: cur.parentName,
-            studentName: cur.name,
-            class: cur.className,
-            balance: cur.balance,
-            schoolName: AppCache.school().name
-          });
-          await Api.call("whatsapp.log", { type: "feeReminder", studentId: cur.studentId, phone: cur.phone, message: msg });
-          idx++;
-          render();
-        };
-      const wa = root.querySelector("#wa");
-      if (wa)
-        wa.onclick = async () => {
-          await Api.call("whatsapp.log", {
-            type: "feeReminder",
-            studentId: cur.studentId,
-            phone: cur.phone,
-            message: "fee reminder"
-          });
-        };
-    };
     render();
   }
 
@@ -766,22 +840,58 @@ const Pages = (() => {
       { action: "fees.pending" },
       { action: "messages.templates" }
     ]);
+    const tplKeys = Object.keys(templates || {});
+    const sample = (pending && pending[0]) || {
+      parentName: "Parent",
+      name: "Student",
+      className: "1",
+      balance: 0,
+      phone: ""
+    };
+    const buildPreview = (key, custom) =>
+      UI.fillTemplate(templates[key] || "", {
+        parentName: sample.parentName || "Parent",
+        studentName: sample.name || "Student",
+        class: sample.className || "",
+        balance: sample.balance != null ? sample.balance : 0,
+        date: new Date().toISOString().slice(0, 10),
+        message: custom || "(your message)",
+        schoolName: AppCache.school().name,
+        receiptNo: "R2627-00001",
+        amount: 4000,
+        mode: "Cash"
+      });
+
     root.innerHTML = `
       <div class="page-header"><div><h2>WhatsApp</h2><p>Click-to-send with templates</p></div></div>
       <div class="card">
         <div class="form-row"><label>Template</label>
-          <select id="tpl">${Object.keys(templates)
-            .map((k) => `<option value="${k}">${k}</option>`)
+          <select id="tpl">${tplKeys
+            .map((k) => `<option value="${k}">${UI.esc(k)}</option>`)
             .join("")}</select></div>
-        <div class="form-row"><label>Custom message body</label><textarea id="customMsg" placeholder="Used for event/complaint/custom"></textarea></div>
+        <div class="form-row"><label>Suggested message</label>
+          <div class="tpl-preview" id="tpl-preview"></div></div>
+        <div class="form-row"><label>Custom message body</label>
+          <textarea id="customMsg" placeholder="Used for event / complaint / custom templates"></textarea></div>
         <div class="table-wrap"><table class="data"><thead><tr><th>Student</th><th>Balance</th><th></th></tr></thead>
-        <tbody>${pending
+        <tbody>${(pending || [])
           .map(
-            (s) => `<tr><td>${UI.esc(s.name)} (${UI.esc(s.className)})</td><td>${UI.money(s.balance)}</td>
-            <td><button class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(s.phone)}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(s.parentName)}" data-class="${UI.esc(s.className)}" data-bal="${s.balance}">Send</button></td></tr>`
+            (s) => `<tr>
+            <td data-label="Student">${UI.esc(s.name)} (${UI.esc(s.className)})</td>
+            <td data-label="Balance">${UI.money(s.balance)}</td>
+            <td class="row-actions"><button class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(s.phone)}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(s.parentName)}" data-class="${UI.esc(s.className)}" data-bal="${s.balance}">Send</button></td></tr>`
           )
-          .join("")}</tbody></table></div>
+          .join("") || `<tr><td colspan="3" class="empty">No students with pending fees</td></tr>`}</tbody></table></div>
       </div>`;
+
+    const syncPreview = () => {
+      const key = root.querySelector("#tpl").value;
+      root.querySelector("#tpl-preview").textContent = buildPreview(key, root.querySelector("#customMsg").value);
+    };
+    root.querySelector("#tpl").onchange = syncPreview;
+    root.querySelector("#customMsg").oninput = syncPreview;
+    syncPreview();
+
     root.querySelectorAll("[data-id]").forEach((btn) => {
       btn.onclick = async () => {
         const key = root.querySelector("#tpl").value;
@@ -957,7 +1067,11 @@ const Pages = (() => {
     const preferred =
       AppCache.user().role === "Teacher" ? (AppCache.user().classAssigned || "1").split("-")[0] : "1";
     let className = UI.pickClassWithStudents(allStudents, preferred);
-    let subject = (CONFIG.subjectsByClass[className] || CONFIG.subjectsByClass["1"] || ["English"])[0];
+    const subjectsFor = (cls) => {
+      const map = AppCache.subjectsByClass();
+      return map[cls] || map["1"] || ["English"];
+    };
+    let subject = subjectsFor(className)[0];
     let examId = exams[0] && exams[0].id;
 
     const rosterForClass = (cls) =>
@@ -982,7 +1096,7 @@ const Pages = (() => {
       (data.marks || []).forEach((m) => {
         markMap[m.studentId] = m.marks;
       });
-      const subjects = CONFIG.subjectsByClass[className] || CONFIG.subjectsByClass["1"] || ["English"];
+      const subjects = subjectsFor(className);
       if (!subjects.includes(subject)) subject = subjects[0];
 
       root.innerHTML = `
@@ -1022,7 +1136,7 @@ const Pages = (() => {
         ${!exams.length ? `<p class="empty">Add exams under setup / Exams sheet, then reload.</p>` : ""}`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
-        subject = (CONFIG.subjectsByClass[className] || ["English"])[0];
+        subject = subjectsFor(className)[0];
         render();
       };
       root.querySelector("#subj").onchange = (e) => {
@@ -1205,13 +1319,67 @@ const Pages = (() => {
       };
   }
 
+  function officialDocHeader(school, titleLine) {
+    return `
+      <div class="print-header">
+        <img src="${CONFIG.school.logo}" alt="">
+        <div>
+          <h2>${UI.esc(school.name || CONFIG.school.name)}</h2>
+          <div>${UI.esc(school.address || CONFIG.school.address || "")}</div>
+          <div>${UI.esc(titleLine)}</div>
+        </div>
+      </div>`;
+  }
+
+  function certificateBodyHtml(type, s, school, cert) {
+    const year = AppCache.get()?.academicYear || CONFIG.school.academicYear;
+    if (type === "TC") {
+      return `
+        <h3 style="text-align:center;margin:1.25rem 0 0.5rem">TRANSFER CERTIFICATE</h3>
+        <p style="text-align:center;color:var(--muted)">No. ${UI.esc(cert.certNo)} · Issued ${UI.esc(cert.issueDate)}</p>
+        <p style="margin-top:1.5rem;line-height:1.75">
+          This is to certify that <strong>${UI.esc(s.name)}</strong>, Admission No. <strong>${UI.esc(s.admissionNo)}</strong>,
+          son/daughter of <strong>${UI.esc(s.parentName || "—")}</strong>, was a student of class
+          <strong>${UI.esc(s.className)}${s.section ? "-" + UI.esc(s.section) : ""}</strong>
+          at ${UI.esc(school.name)} during the academic year ${UI.esc(year)}.
+        </p>
+        <p style="line-height:1.75">He/She is leaving the school with effect from the date of issue of this certificate.
+          All school dues have been cleared as per records.</p>
+        <p style="line-height:1.75">We wish him/her success in future studies.</p>`;
+    }
+    if (type === "ID") {
+      return `
+        <h3 style="text-align:center;margin:1.25rem 0 0.5rem">STUDENT IDENTITY CARD</h3>
+        <p style="text-align:center;color:var(--muted)">ID No. ${UI.esc(cert.certNo)} · ${UI.esc(cert.issueDate)}</p>
+        <div style="margin:1.5rem auto;max-width:320px;border:1px solid #cbd5e1;border-radius:12px;padding:1rem 1.1rem;line-height:1.6">
+          <p><strong>Name:</strong> ${UI.esc(s.name)}</p>
+          <p><strong>Admission No:</strong> ${UI.esc(s.admissionNo)}</p>
+          <p><strong>Class:</strong> ${UI.esc(s.className)}${s.section ? "-" + UI.esc(s.section) : ""}</p>
+          <p><strong>Parent:</strong> ${UI.esc(s.parentName || "—")}</p>
+          <p><strong>Phone:</strong> ${UI.esc(s.phone || "—")}</p>
+          <p><strong>Academic year:</strong> ${UI.esc(year)}</p>
+        </div>
+        <p style="text-align:center;font-size:0.9rem;color:var(--muted)">This card remains the property of the school.</p>`;
+    }
+    return `
+      <h3 style="text-align:center;margin:1.25rem 0 0.5rem">BONAFIDE CERTIFICATE</h3>
+      <p style="text-align:center;color:var(--muted)">No. ${UI.esc(cert.certNo)} · Issued ${UI.esc(cert.issueDate)}</p>
+      <p style="margin-top:1.5rem;line-height:1.75">
+        This is to certify that <strong>${UI.esc(s.name)}</strong>, Admission No. <strong>${UI.esc(s.admissionNo)}</strong>,
+        son/daughter of <strong>${UI.esc(s.parentName || "—")}</strong>, is a bonafide student of class
+        <strong>${UI.esc(s.className)}${s.section ? "-" + UI.esc(s.section) : ""}</strong>
+        at ${UI.esc(school.name)} for the academic year ${UI.esc(year)}.
+      </p>
+      <p style="line-height:1.75">This certificate is issued on request for official purposes.</p>`;
+  }
+
   async function certificatesPage(root) {
     const students = await Api.call("students.list", {});
     root.innerHTML = `
       <div class="page-header"><div><h2>Certificates</h2><p>Bonafide, TC, ID — numbered series</p></div></div>
       <div class="card">
         <div class="form-grid">
-          <div class="form-row"><label>Student</label><select id="stu">${students
+          <div class="form-row"><label>Student</label><select id="stu">${(students || [])
             .map((s) => `<option value="${s.id}">${UI.esc(s.name)} (${UI.esc(s.className)})</option>`)
             .join("")}</select></div>
           <div class="form-row"><label>Type</label><select id="type"><option>Bonafide</option><option>TC</option><option>ID</option></select></div>
@@ -1219,23 +1387,19 @@ const Pages = (() => {
         <button class="btn" id="issue">Issue & print</button>
       </div>`;
     root.querySelector("#issue").onclick = async () => {
+      const type = root.querySelector("#type").value;
       const cert = await Api.call("certificates.issue", {
         studentId: root.querySelector("#stu").value,
-        type: root.querySelector("#type").value
+        type
       });
-      const s = cert.student;
+      const s = cert.student || {};
       const school = cert.school || AppCache.school();
       UI.printHtml(`
         <div class="print-doc">
-          <div class="print-header"><img src="${CONFIG.school.logo}"><div>
-            <h2>${UI.esc(school.name)}</h2><div>${UI.esc(school.address || "")}</div>
-            <div>${UI.esc(cert.type)} Certificate · ${UI.esc(cert.certNo)}</div></div></div>
-          <p style="margin-top:2rem;line-height:1.7">This is to certify that <strong>${UI.esc(s.name)}</strong>,
-          Admission No. <strong>${UI.esc(s.admissionNo)}</strong>, is / was a bonafide student of class
-          <strong>${UI.esc(s.className)}</strong> at ${UI.esc(school.name)}.</p>
-          <p>Issued on ${UI.esc(cert.issueDate)}</p>
-          <p style="margin-top:3rem">Principal</p>
-          <div class="ribbon">${UI.esc(school.motto || "")}</div>
+          ${officialDocHeader(school, type + " Certificate · " + (cert.certNo || ""))}
+          ${certificateBodyHtml(type, s, school, cert)}
+          <p style="margin-top:3rem">Authorized Signatory / Principal</p>
+          <div class="ribbon">${UI.esc(school.motto || CONFIG.school.motto || "")}</div>
         </div>`);
       UI.toast("Issued " + cert.certNo, "ok");
     };
@@ -1341,12 +1505,20 @@ const Pages = (() => {
   }
 
   async function settingsPage(root) {
-    const [modules, services] = await Api.callAll([
+    const [modulesRaw, services, settings] = await Api.callAll([
       { action: "modules.get" },
-      { action: "services.list", payload: { includeInactive: true } }
+      { action: "services.list", payload: { includeInactive: true } },
+      { action: "settings.get" }
     ]);
+    const modules = { ...CONFIG.modulesDefault, ...(modulesRaw || {}) };
+    const fees = { ...CONFIG.classFees, ...(settings.classFees || AppCache.classFees() || {}) };
+    const subjectsMap = {
+      ...CONFIG.subjectsByClass,
+      ...(settings.subjectsByClass || AppCache.subjectsByClass() || {})
+    };
+
     root.innerHTML = `
-      <div class="page-header"><div><h2>Settings</h2><p>Modules & services</p></div>
+      <div class="page-header"><div><h2>Settings</h2><p>Modules, fees, subjects & services</p></div>
         <button class="btn btn-ghost" id="backup">Backup now</button></div>
       <div class="card"><h3>Modules</h3>
         ${Object.keys(modules)
@@ -1357,26 +1529,76 @@ const Pages = (() => {
           .join("")}
         <button class="btn" id="saveMod" style="margin-top:1rem">Save modules</button>
       </div>
+      <div class="card"><h3>Class-wise annual fees</h3>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Annual fee (₹)</th></tr></thead>
+        <tbody>${CONFIG.classes
+          .map(
+            (c) =>
+              `<tr><td data-label="Class">${UI.esc(c)}</td>
+              <td data-label="Fee"><input data-fee-class="${UI.esc(c)}" type="number" min="0" value="${fees[c] != null ? fees[c] : ""}" style="width:140px;max-width:100%;min-height:40px"></td></tr>`
+          )
+          .join("")}</tbody></table></div>
+        <button class="btn" id="saveFees" style="margin-top:0.75rem">Save class fees</button>
+      </div>
+      <div class="card"><h3>Subjects by class</h3>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Comma-separated subject names per class</p>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Subjects</th></tr></thead>
+        <tbody>${CONFIG.classes
+          .map((c) => {
+            const list = subjectsMap[c] || [];
+            return `<tr><td data-label="Class">${UI.esc(c)}</td>
+              <td data-label="Subjects"><input data-subj-class="${UI.esc(c)}" value="${UI.esc(list.join(", "))}" style="width:100%;min-height:40px"></td></tr>`;
+          })
+          .join("")}</tbody></table></div>
+        <button class="btn" id="saveSubj" style="margin-top:0.75rem">Save subjects</button>
+      </div>
       <div class="card"><h3>Services catalog</h3>
         <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Cost</th><th>Type</th><th>Active</th></tr></thead>
-        <tbody>${services
+        <tbody>${(services || [])
           .map(
             (s) =>
-              `<tr><td>${UI.esc(s.name)}</td><td>${UI.money(s.cost)}</td><td>${UI.esc(s.billingType)}</td>
-              <td>${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
+              `<tr><td data-label="Name">${UI.esc(s.name)}</td><td data-label="Cost">${UI.money(s.cost)}</td>
+              <td data-label="Type">${UI.esc(s.billingType)}</td>
+              <td data-label="Active">${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
           )
           .join("")}</tbody></table></div>
         <button class="btn" id="addSvc" style="margin-top:0.75rem">+ Service</button>
       </div>
       ${Api.useDemo() ? `<div class="card"><button class="btn btn-accent" id="resetDemo">Reset demo data</button></div>` : ""}`;
-    root.querySelector("#saveMod").onclick = async () => {
-      const m = {};
-      root.querySelectorAll("[data-mod]").forEach((el) => (m[el.dataset.mod] = el.checked));
-      await Api.call("modules.save", { modules: m });
+
+    const refreshBoot = async () => {
       const boot = await Api.call("bootstrap", {});
       AppCache.set(boot);
       Router.renderNav();
+    };
+
+    root.querySelector("#saveMod").onclick = async () => {
+      const m = { ...CONFIG.modulesDefault };
+      root.querySelectorAll("[data-mod]").forEach((el) => (m[el.dataset.mod] = el.checked));
+      await Api.call("modules.save", { modules: m });
+      await refreshBoot();
       UI.toast("Modules saved", "ok");
+    };
+    root.querySelector("#saveFees").onclick = async () => {
+      const classFees = {};
+      root.querySelectorAll("[data-fee-class]").forEach((el) => {
+        classFees[el.dataset.feeClass] = Number(el.value) || 0;
+      });
+      await Api.call("settings.save", { classFees });
+      await refreshBoot();
+      UI.toast("Class fees saved", "ok");
+    };
+    root.querySelector("#saveSubj").onclick = async () => {
+      const subjectsByClass = {};
+      root.querySelectorAll("[data-subj-class]").forEach((el) => {
+        subjectsByClass[el.dataset.subjClass] = String(el.value || "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean);
+      });
+      await Api.call("settings.save", { subjectsByClass });
+      await refreshBoot();
+      UI.toast("Subjects saved", "ok");
     };
     root.querySelector("#addSvc").onclick = async () => {
       await UI.modal({

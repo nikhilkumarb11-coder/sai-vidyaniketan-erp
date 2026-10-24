@@ -81,6 +81,8 @@ const DemoAPI = (() => {
         grading: CONFIG.grading,
         lateFine: CONFIG.lateFine,
         whatsappTemplates: { ...CONFIG.whatsappTemplates },
+        classFees: { ...CONFIG.classFees },
+        subjectsByClass: JSON.parse(JSON.stringify(CONFIG.subjectsByClass)),
         receiptSeq: 0,
         certSeq: 0,
         admissionSeq: 1006,
@@ -316,7 +318,7 @@ const DemoAPI = (() => {
     return {
       user: publicUser(user),
       academicYear: db.settings.academicYear,
-      modules: db.settings.modules,
+      modules: { ...CONFIG.modulesDefault, ...(db.settings.modules || {}) },
       services: db.services.filter((s) => s.active !== false),
       classes: db.classes,
       grading: db.settings.grading,
@@ -324,6 +326,8 @@ const DemoAPI = (() => {
       whatsappTemplates: db.settings.whatsappTemplates,
       school: db.settings.school,
       theme: db.settings.theme,
+      classFees: db.settings.classFees || { ...CONFIG.classFees },
+      subjectsByClass: db.settings.subjectsByClass || { ...CONFIG.subjectsByClass },
       expenseCategories: db.expenseCategories,
       subjects: db.subjects || [],
       serverTime,
@@ -433,7 +437,18 @@ const DemoAPI = (() => {
         return ok({ ...db.settings });
       case "settings.save":
         requirePrincipal(user);
-        ["school", "theme", "grading", "lateFine", "whatsappTemplates", "academicYear", "openingCash", "openingBank"].forEach((k) => {
+        [
+          "school",
+          "theme",
+          "grading",
+          "lateFine",
+          "whatsappTemplates",
+          "classFees",
+          "subjectsByClass",
+          "academicYear",
+          "openingCash",
+          "openingBank"
+        ].forEach((k) => {
           if (p[k] !== undefined) db.settings[k] = p[k];
         });
         return ok({ ...db.settings });
