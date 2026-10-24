@@ -299,8 +299,8 @@ const Pages = (() => {
       UI.toast("Receipt PDF shared", "ok");
       return;
     }
-    // Desktop / browsers without file share: download PDF, open WhatsApp with caption
-    UI.toast("PDF downloaded — attach it in WhatsApp", "ok");
+    // Desktop: viewer opens PDF; WhatsApp caption ready — attach via Download if needed
+    UI.toast("PDF opened — use Download, then attach in WhatsApp", "ok");
     window.open(UI.waLink(phone, text), "_blank", "noopener");
   }
 
