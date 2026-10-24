@@ -831,29 +831,6 @@
     margin-bottom: 0.45rem;
   }
 
-  .toolbar-compact {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .toolbar-compact select,
-  .toolbar-compact input,
-  .toolbar-compact input[type="date"],
-  .toolbar-compact input[type="search"],
-  .toolbar-compact .btn {
-    width: auto;
-    flex: 0 1 auto;
-    max-width: none;
-  }
-
-  .toolbar-compact input[type="search"],
-  .toolbar-compact input[name="q"] {
-    flex: 1 1 140px;
-    min-width: 120px;
-    max-width: 100%;
-  }
-
   .workspace-bar ~ .content .sticky-tools,
   .content .sticky-tools {
     top: 0;
@@ -934,6 +911,41 @@
   .toolbar .btn {
     width: 100%;
     max-width: none;
+  }
+
+  /* Must come AFTER .toolbar rules — compact bars stay one short row */
+  .toolbar.toolbar-compact {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .toolbar.toolbar-compact select,
+  .toolbar.toolbar-compact input,
+  .toolbar.toolbar-compact input[type="date"],
+  .toolbar.toolbar-compact input[type="search"],
+  .toolbar.toolbar-compact button,
+  .toolbar.toolbar-compact .btn {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    box-sizing: border-box;
+  }
+
+  .toolbar.toolbar-compact input[type="search"],
+  .toolbar.toolbar-compact input[name="q"] {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .toolbar.toolbar-compact select {
+    max-width: 11rem;
   }
 
   .content,
@@ -1159,42 +1171,47 @@ table.data tbody tr:last-child td {
   margin-bottom: 0.65rem;
 }
 
+.toolbar-compact select,
+.toolbar-compact input,
+.toolbar-compact .btn {
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+}
+
 .toolbar-compact select {
   flex: 0 1 auto;
   width: auto;
   min-width: 4.5rem;
   max-width: 10.5rem;
-  min-height: 36px;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .toolbar-compact input[type="date"] {
   flex: 0 0 auto;
   width: auto;
-  min-height: 36px;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
   max-width: 10rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .toolbar-compact input[type="search"],
 .toolbar-compact input[name="q"] {
   flex: 1 1 160px;
   min-width: 140px;
-  max-width: 280px;
-  min-height: 36px;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.85rem;
+  max-width: 320px;
+  padding: 0.3rem 0.6rem;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .toolbar-compact .btn {
   flex: 0 0 auto;
   width: auto;
-  min-height: 36px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .sticky-tools {
@@ -1388,6 +1405,30 @@ table.data tbody tr:last-child td {
   }
   .fees-remind-actions .btn {
     flex: 1;
+    min-height: 34px;
+    height: 34px;
+    max-height: 34px;
+  }
+
+  .fees-dues-tools {
+    flex-wrap: wrap;
+  }
+
+  .fees-dues-tools input[type="search"],
+  .fees-dues-tools input[name="q"] {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+
+  .fees-dues-tools select {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .fees-dues-tools .btn {
+    flex: 0 0 auto;
   }
 }
 

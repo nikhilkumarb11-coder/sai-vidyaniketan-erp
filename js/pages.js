@@ -582,7 +582,8 @@ const Pages = (() => {
           </div>`
             : ""
         }
-        <div class="toolbar toolbar-compact" style="margin-top:0">
+        <div class="toolbar toolbar-compact fees-dues-tools">
+          <input name="q" type="search" placeholder="Search by student or admission no." value="${UI.esc(q)}" autocomplete="off" />
           <select id="fee-class-filter" aria-label="Filter by class">
             <option value="">All classes${duesClasses.length ? ` (${pendingFiltered.length})` : ""}</option>
             ${classOrder
@@ -595,13 +596,16 @@ const Pages = (() => {
               })
               .join("")}
           </select>
-          <button type="button" class="btn btn-ghost" id="export-pending">Download list</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="export-pending">Download list</button>
         </div>
         <div class="card table-wrap"><table class="data">
           <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Amount due</th><th></th></tr></thead>
           <tbody>${duesBody}</tbody></table></div>`;
 
       const receiptsHtml = `
+        <div class="toolbar toolbar-compact">
+          <input name="q" type="search" placeholder="Search by student, admission no. or receipt" value="${UI.esc(q)}" autocomplete="off" />
+        </div>
         <div class="card table-wrap"><table class="data">
           <thead><tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Paid by</th><th>Date</th><th></th></tr></thead>
           <tbody>${
@@ -647,9 +651,6 @@ const Pages = (() => {
         <div class="tabs" role="tablist">
           <button type="button" role="tab" data-tab="dues" class="${tab === "dues" ? "active" : ""}">Fees due (${dueCount})</button>
           <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}">Receipts (${receipts.length})</button>
-        </div>
-        <div class="toolbar toolbar-compact">
-          <input name="q" type="search" placeholder="Search by student, admission no. or receipt" value="${UI.esc(q)}" autocomplete="off" />
         </div>
         <div id="fees-panel">${panel}</div>`;
 
