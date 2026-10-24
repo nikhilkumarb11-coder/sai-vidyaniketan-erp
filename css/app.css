@@ -455,15 +455,99 @@
   border-bottom: 1px solid var(--border);
 }
 
+.page-header-compact {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.55rem;
+  align-items: center;
+}
+
 .page-header h2 {
   font-size: clamp(1.35rem, 2.2vw, 1.6rem);
   margin-bottom: 0.15rem;
 }
 
-.page-header p {
+.page-header p,
+.page-sub {
   margin: 0;
   color: var(--muted);
   font-size: 0.875rem;
+}
+
+/* Compact quick actions — especially for mobile dashboard */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.qa-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 64px;
+  padding: 0.45rem 0.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.qa-item .qa-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.qa-item.qa-dark .qa-ico {
+  background: var(--ink);
+  color: #fff;
+}
+
+.qa-item.qa-accent .qa-ico {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.qa-item:active {
+  transform: scale(0.98);
+}
+
+.quick-actions-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 861px) {
+  .quick-actions {
+    grid-template-columns: repeat(4, minmax(140px, 160px));
+    justify-content: start;
+  }
+  .quick-actions-3 {
+    grid-template-columns: repeat(3, minmax(140px, 160px));
+  }
+  .qa-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    min-height: 44px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.82rem;
+  }
 }
 
 .card {
@@ -1036,11 +1120,42 @@ table.data tbody tr:last-child td {
   }
   .workspace-bar {
     display: flex;
+    height: 48px;
   }
   .bottom-nav {
     display: flex;
   }
   .content {
-    padding: 1rem 1rem 1.35rem;
+    padding: 0.75rem 0.85rem 1.15rem;
+  }
+  .page-header h2 {
+    font-size: 1.2rem;
+  }
+  .page-header-compact {
+    margin-bottom: 0.55rem;
+    padding-bottom: 0.4rem;
+  }
+  .page-header-compact .page-sub {
+    font-size: 0.75rem;
+  }
+  .stats-row {
+    gap: 0.55rem;
+  }
+  .stats-row .stat {
+    padding: 0.7rem 0.75rem;
+  }
+  .stats-row .stat .value {
+    font-size: 1.2rem;
+  }
+  .stats-row .stat .label {
+    font-size: 0.62rem;
+  }
+  .quick-actions {
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+  .qa-item {
+    min-height: 58px;
+    font-size: 0.62rem;
   }
 }

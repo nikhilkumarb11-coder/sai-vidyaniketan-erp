@@ -33,23 +33,23 @@ const Pages = (() => {
       const classes = Object.keys(d.enrollmentByClass || {});
       const max = Math.max(1, ...classes.map((c) => d.enrollmentByClass[c]));
       root.innerHTML = `
-        <div class="page-header">
+        <div class="page-header page-header-compact">
           <div>
             <h2>Dashboard</h2>
-            <p>${UI.esc(AppCache.school().name || "")} · Academic year ${UI.esc(AppCache.get().academicYear)}</p>
-          </div>
-          <div class="toolbar" style="margin:0">
-            <a class="btn btn-dark" href="#/fees">Collect fee</a>
-            <a class="btn" href="#/attendance">Attendance</a>
-            <a class="btn btn-ghost" href="#/students">New student</a>
-            <a class="btn btn-accent" href="#/reminders">Reminders (${d.reminderCount || 0})</a>
+            <p class="page-sub">${UI.esc(AppCache.get().academicYear || "")}</p>
           </div>
         </div>
-        <div class="grid grid-4">
+        <div class="quick-actions" aria-label="Quick actions">
+          <a class="qa-item qa-dark" href="#/fees"><span class="qa-ico">₹</span><span>Collect</span></a>
+          <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attend</span></a>
+          <a class="qa-item" href="#/students"><span class="qa-ico">+</span><span>Admit</span></a>
+          <a class="qa-item qa-accent" href="#/reminders"><span class="qa-ico">!</span><span>Remind${d.reminderCount ? ` (${d.reminderCount})` : ""}</span></a>
+        </div>
+        <div class="grid grid-4 stats-row">
           <div class="stat"><div class="label">Students</div><div class="value">${d.totalStudents}</div></div>
           <div class="stat"><div class="label">Fee today</div><div class="value ok">${UI.money(d.fees.today)}</div></div>
           <div class="stat"><div class="label">Pending</div><div class="value accent">${UI.money(d.fees.pendingTotal)}</div></div>
-          <div class="stat"><div class="label">Attendance today</div><div class="value">${d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—"}</div></div>
+          <div class="stat"><div class="label">Attendance</div><div class="value">${d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—"}</div></div>
         </div>
         <div class="grid grid-2" style="margin-top:1rem">
           <div class="card">
@@ -84,8 +84,14 @@ const Pages = (() => {
     } else {
       const d = await Api.call("dashboard.teacher", {});
       root.innerHTML = `
-        <div class="page-header"><div><h2>My class</h2><p>${UI.esc(d.classAssigned || "")}</p></div>
-          <a class="btn" href="#/attendance">Mark attendance</a></div>
+        <div class="page-header page-header-compact">
+          <div><h2>My class</h2><p class="page-sub">${UI.esc(d.classAssigned || "")}</p></div>
+        </div>
+        <div class="quick-actions quick-actions-3">
+          <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attendance</span></a>
+          <a class="qa-item" href="#/exams"><span class="qa-ico">M</span><span>Marks</span></a>
+          <a class="qa-item" href="#/notices"><span class="qa-ico">N</span><span>Notices</span></a>
+        </div>
         <div class="card">
           <h3>Today's attendance</h3>
           ${
