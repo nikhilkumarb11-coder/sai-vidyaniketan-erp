@@ -504,12 +504,14 @@ const ReceiptPdf = (() => {
       <div class="receipt-viewer-panel" role="dialog" aria-modal="true" aria-label="Receipt">
         <div class="receipt-viewer-bar">
           <strong>${escHtml(title)}</strong>
-          <button type="button" class="btn btn-sm" data-download>Download PDF</button>
-          <button type="button" class="btn btn-sm btn-ghost" data-print>Print</button>
-          <button type="button" class="btn btn-sm btn-ghost" data-close>Close</button>
+          <div class="receipt-viewer-actions">
+            <button type="button" class="btn btn-sm" data-download>Download</button>
+            <button type="button" class="btn btn-sm btn-ghost" data-print>Print</button>
+            <button type="button" class="btn btn-sm btn-ghost" data-close>Close</button>
+          </div>
         </div>
         <div class="receipt-viewer-body">
-          ${receipt ? receiptPreviewHtml(receipt) : `<p class="empty">Receipt ready — tap Download PDF</p>`}
+          ${receipt ? receiptPreviewHtml(receipt) : `<p class="empty">Receipt ready — tap Download</p>`}
         </div>
       </div>`;
     document.body.appendChild(overlay);
