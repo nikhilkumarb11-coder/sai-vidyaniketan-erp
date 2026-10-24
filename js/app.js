@@ -98,7 +98,13 @@ const App = (() => {
     Router.start();
     if (typeof PWA !== "undefined") PWA.start();
     Api.warm();
-    const session = await Auth.restore();
+    let session = await Auth.restore();
+    // Brief retry when token exists but first bootstrap hit a cold start
+    if (!session && Api.getToken()) {
+      await new Promise((r) => setTimeout(r, 800));
+      Api.warm();
+      session = await Auth.restore();
+    }
     if (session) {
       if (!location.hash) location.hash = "#/dashboard";
       await Router.go();
