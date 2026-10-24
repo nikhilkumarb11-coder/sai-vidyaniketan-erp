@@ -7,8 +7,8 @@ const Pages = (() => {
     Router.register("#/students", studentsPage, { principalOnly: true });
     Router.register("#/enquiries", enquiriesPage, { principalOnly: true });
     Router.register("#/fees", feesPage, { principalOnly: true });
-    Router.register("#/pending", (root) => feesPage(root, { tab: "pending" }), { principalOnly: true });
-    Router.register("#/reminders", (root) => feesPage(root, { tab: "reminders" }), { principalOnly: true });
+    Router.register("#/pending", (root) => feesPage(root, { tab: "dues" }), { principalOnly: true });
+    Router.register("#/reminders", (root) => feesPage(root, { tab: "dues" }), { principalOnly: true });
     Router.register("#/attendance", attendancePage);
     Router.register("#/whatsapp", whatsappPage, { principalOnly: true });
     Router.register("#/expenses", expensesPage, { principalOnly: true });
@@ -43,7 +43,7 @@ const Pages = (() => {
           <a class="qa-item qa-dark" href="#/fees"><span class="qa-ico">₹</span><span>Take fee</span></a>
           <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attendance</span></a>
           <a class="qa-item" href="#/students"><span class="qa-ico">+</span><span>New student</span></a>
-          <a class="qa-item qa-accent" href="#/reminders"><span class="qa-ico">!</span><span>Remind${d.reminderCount ? ` (${d.reminderCount})` : ""}</span></a>
+          <a class="qa-item qa-accent" href="#/fees"><span class="qa-ico">!</span><span>Fees due${d.reminderCount ? ` (${d.reminderCount})` : ""}</span></a>
         </div>
         <div class="grid grid-4 stats-row">
           <div class="stat"><div class="label">Students</div><div class="value">${d.totalStudents}</div></div>
@@ -425,7 +425,8 @@ const Pages = (() => {
   }
 
   async function feesPage(root, state = {}) {
-    const allowed = ["collect", "pending", "reminders", "receipts"];
+    const allowed = ["dues", "receipts"];
+    const legacyTab = { collect: "dues", pending: "dues", reminders: "dues" };
     const [pending, payments, students, reminderQueue] = await Api.callAll([
       { action: "fees.pending" },
       { action: "fees.list" },
@@ -441,8 +442,12 @@ const Pages = (() => {
       .reverse()
       .map((p) => ({ ...p, student: byId[p.studentId] || {} }));
     const reminders = reminderQueue || [];
+    const reasonByStudent = {};
+    reminders.forEach((r) => {
+      if (r.studentId) reasonByStudent[r.studentId] = r.reasons || [];
+    });
 
-    let tab = allowed.includes(state.tab) ? state.tab : "collect";
+    let tab = allowed.includes(state.tab) ? state.tab : legacyTab[state.tab] || "dues";
     let q = "";
     let remindIdx = 0;
     const isCancelled = (p) => {
@@ -458,8 +463,17 @@ const Pages = (() => {
       return !qLower || parts.some((x) => String(x || "").toLowerCase().includes(qLower));
     };
 
+    const waMsg = (s) =>
+      UI.fillTemplate(feeTpl(), {
+        parentName: s.parentName,
+        studentName: s.name,
+        class: s.className,
+        balance: s.balance,
+        schoolName: AppCache.school().name
+      });
+
     const render = (opts = {}) => {
-      if (opts.tab) tab = opts.tab;
+      if (opts.tab) tab = legacyTab[opts.tab] || opts.tab;
       if (opts.q != null) q = opts.q;
       const keepFocus = opts.keepFocus;
 
@@ -474,24 +488,26 @@ const Pages = (() => {
       );
       const receiptById = Object.fromEntries(allReceipts.map((p) => [p.id, p]));
 
-      const collectHtml = `
-        <div class="card table-wrap"><table class="data">
-          <thead><tr><th>Student</th><th>Class</th><th>Amount due</th><th></th></tr></thead>
-          <tbody>${
-            pendingFiltered.length
-              ? pendingFiltered
-                  .map(
-                    (s) => `<tr>
-                <td data-label="Student">${UI.esc(s.name)}</td>
-                <td data-label="Class">${UI.esc(s.className)}</td>
-                <td data-label="Amount due">${UI.money(s.balance)}</td>
-                <td class="row-actions"><button class="btn btn-sm" data-fee="${s.id}">Take fee</button></td></tr>`
-                  )
-                  .join("")
-              : `<tr><td colspan="4" class="empty">No students with fees due</td></tr>`
-          }</tbody></table></div>`;
+      if (remindIdx >= remindersFiltered.length) remindIdx = Math.max(0, remindersFiltered.length - 1);
+      const cur = remindersFiltered[remindIdx];
 
-      const pendingHtml = `
+      const duesHtml = `
+        ${
+          cur
+            ? `<div class="card fees-remind-strip">
+            <div class="fees-remind-copy">
+              <strong>Next to remind:</strong> ${UI.esc(cur.name)} · Class ${UI.esc(cur.className)}
+              <span class="fees-remind-amt">${UI.money(cur.balance)}</span>
+              ${(cur.reasons || []).map((r) => `<span class="badge badge-warn">${UI.esc(r)}</span>`).join(" ")}
+            </div>
+            <div class="fees-remind-actions">
+              <a class="btn btn-sm" id="wa-remind" target="_blank" rel="noopener" href="${UI.waLink(cur.phone, waMsg(cur))}">Message</a>
+              <button type="button" class="btn btn-sm btn-ghost" id="next-remind">Next →</button>
+              <span class="fees-remind-count">${remindIdx + 1}/${remindersFiltered.length}</span>
+            </div>
+          </div>`
+            : ""
+        }
         <div class="toolbar" style="margin-top:0">
           <button type="button" class="btn btn-ghost" id="export-pending">Download list</button>
         </div>
@@ -500,68 +516,26 @@ const Pages = (() => {
           <tbody>${
             pendingFiltered.length
               ? pendingFiltered
-                  .map(
-                    (s) => `<tr>
-              <td data-label="Name">${UI.esc(s.name)}</td>
+                  .map((s) => {
+                    const reasons = reasonByStudent[s.id] || reasonByStudent[s.studentId] || [];
+                    return `<tr>
+              <td data-label="Name">${UI.esc(s.name)}${
+                      reasons.length
+                        ? `<div class="cell-sub">${UI.esc(reasons.join("; "))}</div>`
+                        : ""
+                    }</td>
               <td data-label="Class">${UI.esc(s.className)}</td>
               <td data-label="Phone">${UI.esc(s.phone)}</td>
               <td data-label="Pay by">${UI.esc(s.payByDate || "—")}</td>
               <td data-label="Amount due">${UI.money(s.balance)}</td>
               <td class="row-actions">
                 <button class="btn btn-sm" data-fee="${s.id}">Take fee</button>
-                <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(
-                  s.phone,
-                  UI.fillTemplate(feeTpl(), {
-                    parentName: s.parentName,
-                    studentName: s.name,
-                    class: s.className,
-                    balance: s.balance,
-                    schoolName: AppCache.school().name
+                <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(s.phone, waMsg(s))}">Message</a>
+              </td></tr>`;
                   })
-                )}">WhatsApp</a>
-              </td></tr>`
-                  )
                   .join("")
               : `<tr><td colspan="6" class="empty">No fees due right now</td></tr>`
           }</tbody></table></div>`;
-
-      if (remindIdx >= remindersFiltered.length) remindIdx = Math.max(0, remindersFiltered.length - 1);
-      const cur = remindersFiltered[remindIdx];
-      const remindersHtml = `
-        <div class="card">
-          ${
-            cur
-              ? `<h3>${UI.esc(cur.name)} · ${UI.esc(cur.className)}</h3>
-            <p>Amount due ${UI.money(cur.balance)}</p>
-            <p>${(cur.reasons || []).map((r) => `<span class="badge badge-warn">${UI.esc(r)}</span> `).join("")}</p>
-            <div class="toolbar">
-              <a class="btn" id="wa-remind" target="_blank" rel="noopener" href="${UI.waLink(
-                cur.phone,
-                UI.fillTemplate(feeTpl(), {
-                  parentName: cur.parentName,
-                  studentName: cur.name,
-                  class: cur.className,
-                  balance: cur.balance,
-                  schoolName: AppCache.school().name
-                })
-              )}">Message parent</a>
-              <button class="btn btn-ghost" id="next-remind">Next parent →</button>
-            </div>
-            <p style="color:var(--muted)">${remindIdx + 1} of ${remindersFiltered.length}</p>`
-              : `<p class="empty">No parents to remind</p>`
-          }
-        </div>
-        <div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Name</th><th>Amount due</th><th>Reason</th></tr></thead>
-        <tbody>${remindersFiltered
-          .map(
-            (x, i) =>
-              `<tr ${i === remindIdx ? 'style="background:var(--primary-soft)"' : ""}>
-                <td data-label="#">${i + 1}</td>
-                <td data-label="Name">${UI.esc(x.name)}</td>
-                <td data-label="Amount due">${UI.money(x.balance)}</td>
-                <td data-label="Reason">${UI.esc((x.reasons || []).join("; "))}</td></tr>`
-          )
-          .join("") || `<tr><td colspan="4" class="empty">None</td></tr>`}</tbody></table></div>`;
 
       const receiptsHtml = `
         <div class="card table-wrap"><table class="data">
@@ -601,21 +575,12 @@ const Pages = (() => {
               : `<tr><td colspan="6" class="empty">No receipts found</td></tr>`
           }</tbody></table></div>`;
 
-      const panel =
-        tab === "receipts"
-          ? receiptsHtml
-          : tab === "pending"
-            ? pendingHtml
-            : tab === "reminders"
-              ? remindersHtml
-              : collectHtml;
+      const panel = tab === "receipts" ? receiptsHtml : duesHtml;
 
       root.innerHTML = `
-        <div class="page-header"><div><h2>Fees</h2><p>Take fees, see dues, remind parents, and open receipts</p></div></div>
+        <div class="page-header"><div><h2>Fees</h2><p>Take fees, message parents, or open receipts</p></div></div>
         <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}">Take fee (${pendingFiltered.length})</button>
-          <button type="button" role="tab" data-tab="pending" class="${tab === "pending" ? "active" : ""}">Fees due (${pendingFiltered.length})</button>
-          <button type="button" role="tab" data-tab="reminders" class="${tab === "reminders" ? "active" : ""}">Remind parents (${remindersFiltered.length})</button>
+          <button type="button" role="tab" data-tab="dues" class="${tab === "dues" ? "active" : ""}">Fees due (${pendingFiltered.length})</button>
           <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}">Receipts (${receipts.length})</button>
         </div>
         <div class="toolbar">
@@ -652,18 +617,11 @@ const Pages = (() => {
       });
       root.querySelector("#next-remind")?.addEventListener("click", async () => {
         if (!cur) return;
-        const msg = UI.fillTemplate(feeTpl(), {
-          parentName: cur.parentName,
-          studentName: cur.name,
-          class: cur.className,
-          balance: cur.balance,
-          schoolName: AppCache.school().name
-        });
         await Api.call("whatsapp.log", {
           type: "feeReminder",
           studentId: cur.studentId,
           phone: cur.phone,
-          message: msg
+          message: waMsg(cur)
         });
         remindIdx++;
         render({});
@@ -674,7 +632,7 @@ const Pages = (() => {
           type: "feeReminder",
           studentId: cur.studentId,
           phone: cur.phone,
-          message: "fee reminder"
+          message: waMsg(cur)
         });
       });
       root.querySelectorAll("[data-view]").forEach((b) => {
