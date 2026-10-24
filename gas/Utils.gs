@@ -39,21 +39,29 @@ var SHEET_HEADERS = {
 var REQUEST_CACHE_ = {};
 var SETTINGS_MEM_ = null;
 var CACHED_SHEETS_ = {
-  Students: 120,
-  StudentServices: 120,
-  FeePayments: 60,
-  Services: 300,
-  Settings: 300,
-  Classes: 300,
-  Exams: 300,
-  ExpenseCategories: 300,
-  Staff: 120,
-  StockItems: 120,
-  Enquiries: 60,
+  Students: 300,
+  StudentServices: 300,
+  FeePayments: 180,
+  Installments: 180,
+  Attendance: 120,
+  Users: 300,
+  Services: 600,
+  Settings: 600,
+  Classes: 600,
+  Exams: 600,
+  ExpenseCategories: 600,
+  Staff: 300,
+  StockItems: 300,
+  Enquiries: 180,
   YearSummary: 600,
-  Notices: 120,
-  Routes: 300
+  Notices: 300,
+  Routes: 600,
+  Subjects: 600
 };
+
+/** CacheService value cap is ~100KB; large tabs are split into chunks. */
+var SHEET_CACHE_CHUNK_ = 90000;
+var SHEET_CACHE_MAX_CHUNKS_ = 40;
 
 function beginRequest_() {
   REQUEST_CACHE_ = {};
@@ -85,8 +93,59 @@ function invalidateSheetCache_(sheetName) {
   delete REQUEST_CACHE_["rows_" + sheetName];
   if (sheetName === "Settings") SETTINGS_MEM_ = null;
   try {
-    CacheService.getScriptCache().remove("rows_" + sheetName);
+    sheetCacheRemove_("rows_" + sheetName);
   } catch (e) {}
+}
+
+function sheetCacheGet_(memKey) {
+  var cache = CacheService.getScriptCache();
+  var meta = cache.get(memKey);
+  if (meta == null) return null;
+  if (String(meta).indexOf("chunks:") === 0) {
+    var n = Number(String(meta).slice(7));
+    if (!(n > 0)) return null;
+    var keys = [];
+    for (var i = 0; i < n; i++) keys.push(memKey + ":" + i);
+    var parts = cache.getAll(keys);
+    var json = "";
+    for (var j = 0; j < n; j++) {
+      var part = parts[memKey + ":" + j];
+      if (typeof part !== "string") return null;
+      json += part;
+    }
+    return JSON.parse(json);
+  }
+  return JSON.parse(meta);
+}
+
+function sheetCachePut_(memKey, rows, ttl) {
+  var json = JSON.stringify(rows);
+  var cache = CacheService.getScriptCache();
+  if (json.length < SHEET_CACHE_CHUNK_) {
+    cache.put(memKey, json, ttl);
+    return;
+  }
+  var n = Math.ceil(json.length / SHEET_CACHE_CHUNK_);
+  if (n > SHEET_CACHE_MAX_CHUNKS_) return;
+  var values = {};
+  for (var i = 0; i < n; i++) {
+    values[memKey + ":" + i] = json.slice(i * SHEET_CACHE_CHUNK_, (i + 1) * SHEET_CACHE_CHUNK_);
+  }
+  cache.putAll(values, ttl);
+  cache.put(memKey, "chunks:" + n, ttl);
+}
+
+function sheetCacheRemove_(memKey) {
+  var cache = CacheService.getScriptCache();
+  var meta = cache.get(memKey);
+  if (meta != null && String(meta).indexOf("chunks:") === 0) {
+    var n = Number(String(meta).slice(7));
+    var keys = [memKey];
+    for (var i = 0; i < n; i++) keys.push(memKey + ":" + i);
+    cache.removeAll(keys);
+  } else {
+    cache.remove(memKey);
+  }
 }
 
 function uid_(prefix) {
@@ -159,9 +218,8 @@ function readAllObjects_(sheetName) {
   var ttl = CACHED_SHEETS_[sheetName];
   if (ttl) {
     try {
-      var cached = CacheService.getScriptCache().get(memKey);
-      if (cached) {
-        var parsed = JSON.parse(cached);
+      var parsed = sheetCacheGet_(memKey);
+      if (parsed) {
         REQUEST_CACHE_[memKey] = parsed;
         return parsed;
       }
@@ -187,46 +245,98 @@ function readAllObjects_(sheetName) {
 
   if (ttl) {
     try {
-      var payload = JSON.stringify(out);
-      // CacheService limit ~100KB per entry
-      if (payload.length < 90000) {
-        CacheService.getScriptCache().put(memKey, payload, ttl);
-      }
+      sheetCachePut_(memKey, out, ttl);
     } catch (e2) {}
   }
   return out;
 }
 
-function appendObject_(sheetName, obj) {
+/** Appends one or more rows with a single setValues (faster than appendRow). */
+function appendObjects_(sheetName, objs) {
+  if (!objs || !objs.length) return [];
   var sh = getSheet_(sheetName);
   var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  if (!obj.id) obj.id = uid_(sheetName.slice(0, 3).toLowerCase());
-  if (!obj.createdAt) obj.createdAt = nowIso_();
-  if (!obj.updatedAt) obj.updatedAt = obj.createdAt;
-  sh.appendRow(objectToRow_(headers, obj));
-  invalidateSheetCache_(sheetName);
-  return obj;
+  var now = nowIso_();
+  var prepared = [];
+  for (var i = 0; i < objs.length; i++) {
+    var obj = objs[i];
+    if (!obj.id) obj.id = uid_(sheetName.slice(0, 3).toLowerCase());
+    if (!obj.createdAt) obj.createdAt = now;
+    if (!obj.updatedAt) obj.updatedAt = obj.createdAt;
+    prepared.push(obj);
+  }
+  var startRow = Math.max(sh.getLastRow() + 1, 2);
+  var values = prepared.map(function (o) {
+    return objectToRow_(headers, o);
+  });
+  sh.getRange(startRow, 1, values.length, headers.length).setValues(values);
+
+  var memKey = "rows_" + sheetName;
+  if (REQUEST_CACHE_[memKey]) {
+    for (var r = 0; r < prepared.length; r++) {
+      var copy = {};
+      for (var k in prepared[r]) copy[k] = prepared[r][k];
+      copy._row = startRow + r;
+      REQUEST_CACHE_[memKey].push(copy);
+    }
+  }
+  try {
+    sheetCacheRemove_(memKey);
+  } catch (e) {}
+  if (sheetName === "Settings") SETTINGS_MEM_ = null;
+  return prepared;
+}
+
+function appendObject_(sheetName, obj) {
+  return appendObjects_(sheetName, [obj])[0];
 }
 
 function updateObjectById_(sheetName, id, patch) {
+  return updateObjectsById_(sheetName, [Object.assign({ id: id }, patch)])[0];
+}
+
+/**
+ * Applies several id patches. Writes each changed row once, then invalidates script cache once
+ * (avoids re-reading the sheet between installment updates inside fees.collect).
+ */
+function updateObjectsById_(sheetName, patches) {
+  if (!patches || !patches.length) return [];
   var rows = readAllObjects_(sheetName);
-  var found = null;
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i].id) === String(id)) {
-      found = rows[i];
-      break;
-    }
-  }
-  if (!found) throw new Error(sheetName + " record not found: " + id);
+  var byId = {};
+  for (var i = 0; i < rows.length; i++) byId[String(rows[i].id)] = rows[i];
   var sh = getSheet_(sheetName);
   var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  var merged = {};
-  for (var k in found) if (k !== "_row") merged[k] = found[k];
-  for (var p in patch) merged[p] = patch[p];
-  merged.updatedAt = nowIso_();
-  sh.getRange(found._row, 1, 1, headers.length).setValues([objectToRow_(headers, merged)]);
-  invalidateSheetCache_(sheetName);
-  return merged;
+  var now = nowIso_();
+  var updated = [];
+  for (var p = 0; p < patches.length; p++) {
+    var patch = patches[p];
+    var found = byId[String(patch.id)];
+    if (!found) throw new Error(sheetName + " record not found: " + patch.id);
+    var merged = {};
+    for (var k in found) if (k !== "_row") merged[k] = found[k];
+    for (var key in patch) {
+      if (key === "id") continue;
+      merged[key] = patch[key];
+    }
+    merged.updatedAt = now;
+    sh.getRange(found._row, 1, 1, headers.length).setValues([objectToRow_(headers, merged)]);
+    merged._row = found._row;
+    byId[String(patch.id)] = merged;
+    for (var r = 0; r < rows.length; r++) {
+      if (String(rows[r].id) === String(patch.id)) {
+        rows[r] = merged;
+        break;
+      }
+    }
+    var clean = {};
+    for (var c in merged) if (c !== "_row") clean[c] = merged[c];
+    updated.push(clean);
+  }
+  try {
+    sheetCacheRemove_("rows_" + sheetName);
+  } catch (e) {}
+  if (sheetName === "Settings") SETTINGS_MEM_ = null;
+  return updated;
 }
 
 function findById_(sheetName, id) {
@@ -264,8 +374,7 @@ function setSetting_(key, value) {
       return;
     }
   }
-  getSheet_("Settings").appendRow([key, str]);
-  invalidateSheetCache_("Settings");
+  appendObjects_("Settings", [{ key: key, value: str }]);
 }
 
 function withLock_(fn) {

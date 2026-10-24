@@ -4,10 +4,45 @@
 
 var SESSION_HOURS = 8;
 
+function sessionCacheKey_(token) {
+  return "sess:" + String(token || "").slice(0, 80);
+}
+
+function putSessionCache_(token, userId, expiresAt) {
+  var ttl = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000);
+  if (!(ttl > 30)) return;
+  cachePut_(sessionCacheKey_(token), { userId: userId, expiresAt: expiresAt }, Math.min(ttl, 21600));
+}
+
+function clearSessionCache_(token) {
+  cacheRemove_(sessionCacheKey_(token));
+}
+
+/** Drop expired Sessions rows so requireUser_ sheet fallback stays small. */
+function pruneExpiredSessions_() {
+  try {
+    var sessions = readAllObjects_("Sessions");
+    var now = Date.now();
+    var dead = [];
+    for (var i = 0; i < sessions.length; i++) {
+      if (new Date(sessions[i].expiresAt).getTime() < now) dead.push(sessions[i]._row);
+    }
+    if (!dead.length) return;
+    dead.sort(function (a, b) {
+      return b - a;
+    });
+    var sh = getSheet_("Sessions");
+    for (var d = 0; d < dead.length; d++) sh.deleteRow(dead[d]);
+    invalidateSheetCache_("Sessions");
+  } catch (e) {}
+}
+
 function authLogin(payload) {
   var username = String(payload.username || "").trim();
   var password = String(payload.password || "");
   if (!username || !password) return fail_("Username and password required", "AUTH");
+
+  pruneExpiredSessions_();
 
   var users = readAllObjects_("Users");
   var user = null;
@@ -29,21 +64,34 @@ function authLogin(payload) {
     expiresAt: expires,
     createdAt: nowIso_()
   });
+  putSessionCache_(token, user.id, expires);
   audit_(user, "login", "Users", user.id, {});
-  return ok_({
+
+  var out = {
     token: token,
     expiresAt: expires,
     user: publicUser_(user)
-  });
+  };
+  // withData (default true from the app) returns bootstrap in the same reply — one cold start.
+  if (payload.withData !== false) {
+    try {
+      out.bootstrap = buildBootstrap_(user);
+    } catch (e) {
+      console.error("bootstrap at login", e && e.stack);
+    }
+  }
+  return ok_(out);
 }
 
 function authLogout(payload, user) {
   var token = payload.token || (user && user._token);
+  clearSessionCache_(token);
   var sessions = readAllObjects_("Sessions");
   for (var i = 0; i < sessions.length; i++) {
     if (sessions[i].token === token) {
       var sh = getSheet_("Sessions");
       sh.deleteRow(sessions[i]._row);
+      invalidateSheetCache_("Sessions");
       break;
     }
   }
@@ -53,6 +101,19 @@ function authLogout(payload, user) {
 
 function requireUser_(token) {
   if (!token) throw new Error("Not authenticated");
+
+  var cached = cacheGet_(sessionCacheKey_(token));
+  if (cached && cached.userId) {
+    if (new Date(cached.expiresAt).getTime() < Date.now()) {
+      clearSessionCache_(token);
+      throw new Error("Session expired");
+    }
+    var cachedUser = findById_("Users", cached.userId);
+    if (!cachedUser || !isTruthy_(cachedUser.active)) throw new Error("User inactive");
+    cachedUser._token = token;
+    return cachedUser;
+  }
+
   var sessions = readAllObjects_("Sessions");
   var session = null;
   for (var i = 0; i < sessions.length; i++) {
@@ -67,6 +128,7 @@ function requireUser_(token) {
   }
   var user = findById_("Users", session.userId);
   if (!user || !isTruthy_(user.active)) throw new Error("User inactive");
+  putSessionCache_(token, user.id, session.expiresAt);
   user._token = token;
   return user;
 }
@@ -79,7 +141,7 @@ function requireRole_(user, roles) {
   return user;
 }
 
-function authBootstrap(payload, user) {
+function buildBootstrap_(user) {
   var modules = getSetting_("modules", {
     transport: false,
     stock: true,
@@ -104,7 +166,7 @@ function authBootstrap(payload, user) {
   var school = getSetting_("school", {});
   var theme = getSetting_("theme", {});
 
-  return ok_({
+  return {
     user: publicUser_(user),
     academicYear: currentAcademicYear_(),
     modules: modules,
@@ -121,7 +183,11 @@ function authBootstrap(payload, user) {
     subjects: readAllObjects_("Subjects").filter(function (s) {
       return isTruthy_(s.active);
     })
-  });
+  };
+}
+
+function authBootstrap(payload, user) {
+  return ok_(buildBootstrap_(user));
 }
 
 function usersList(payload, user) {

@@ -66,18 +66,21 @@ function applyPaymentToInstallments_(studentId, amount, user) {
     .sort(function (a, b) {
       return String(a.dueDate).localeCompare(String(b.dueDate));
     });
+  var patches = [];
   for (var i = 0; i < inst.length && left > 0; i++) {
     var due = Number(inst[i].amount) - Number(inst[i].paidAmount || 0);
     var pay = Math.min(due, left);
     var paidAmount = Number(inst[i].paidAmount || 0) + pay;
     var status = paidAmount >= Number(inst[i].amount) ? "paid" : "partial";
-    updateObjectById_("Installments", inst[i].id, {
+    patches.push({
+      id: inst[i].id,
       paidAmount: paidAmount,
       status: status,
       updatedBy: user.id
     });
     left -= pay;
   }
+  if (patches.length) updateObjectsById_("Installments", patches);
 }
 
 function feesList(payload, user) {

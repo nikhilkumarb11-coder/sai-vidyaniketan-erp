@@ -349,7 +349,24 @@ const DemoAPI = (() => {
         const expiresAt = new Date(Date.now() + 8 * 3600 * 1000).toISOString();
         db.sessions.push({ token, userId: u.id, expiresAt, createdAt: now() });
         audit(db, u, "login", "Users", u.id);
-        return ok({ token, expiresAt, user: publicUser(u) });
+        const out = { token, expiresAt, user: publicUser(u) };
+        if (p.withData !== false) {
+          out.bootstrap = {
+            user: publicUser(u),
+            academicYear: db.settings.academicYear,
+            modules: db.settings.modules,
+            services: db.services.filter((s) => s.active !== false),
+            classes: db.classes,
+            grading: db.settings.grading,
+            exams: db.exams.filter((e) => e.active !== false),
+            whatsappTemplates: db.settings.whatsappTemplates,
+            school: db.settings.school,
+            theme: db.settings.theme,
+            expenseCategories: db.expenseCategories,
+            subjects: []
+          };
+        }
+        return ok(out);
       }
       case "logout": {
         db.sessions = db.sessions.filter((s) => s.token !== p.token);

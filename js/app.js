@@ -14,6 +14,7 @@ const App = (() => {
   function showLogin() {
     document.getElementById("login-view").classList.remove("hidden");
     document.getElementById("app-view").classList.add("hidden");
+    Api.warm();
   }
 
   function showShell() {
@@ -35,8 +36,14 @@ const App = (() => {
 
   function wireLogin() {
     const form = document.getElementById("login-form");
+    const wake = () => Api.warm();
+    form.username.addEventListener("input", wake);
+    form.password.addEventListener("input", wake);
+    form.username.addEventListener("focus", wake);
+    form.password.addEventListener("focus", wake);
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      Api.warm();
       const username = form.username.value.trim();
       const password = form.password.value;
       const btn = form.querySelector("button[type=submit]");
@@ -83,6 +90,7 @@ const App = (() => {
     wireLogout();
     Pages.registerAll();
     Router.start();
+    Api.warm();
     const session = await Auth.restore();
     if (session) {
       if (!location.hash) location.hash = "#/dashboard";

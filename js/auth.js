@@ -1,7 +1,12 @@
 const Auth = (() => {
   async function login(username, password) {
-    const data = await Api.call("login", { username, password });
+    // Server returns bootstrap with the token when withData is set — one round trip.
+    const data = await Api.call("login", { username, password, withData: true });
     Api.setToken(data.token);
+    if (data.bootstrap) {
+      AppCache.set(data.bootstrap);
+      return data.bootstrap;
+    }
     const boot = await Api.call("bootstrap", {});
     AppCache.set(boot);
     return boot;
