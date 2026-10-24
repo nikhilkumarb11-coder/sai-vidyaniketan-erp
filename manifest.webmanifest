@@ -1,0 +1,26 @@
+{
+  "name": "Sai Vidyaniketan School ERP",
+  "short_name": "SVS ERP",
+  "description": "School ERP for Sai Vidyaniketan — students, fees, attendance, and reports.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F1F5F9",
+  "theme_color": "#0F172A",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

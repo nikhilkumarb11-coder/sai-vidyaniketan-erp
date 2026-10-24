@@ -1,14 +1,20 @@
 const App = (() => {
   function applyTheme() {
-    const t = (AppCache.get() && AppCache.get().theme) || CONFIG.theme;
+    // Prefer product theme from config; ignore legacy cream school defaults from Sheet
+    const t = CONFIG.theme || {};
     const root = document.documentElement;
-    root.style.setProperty("--primary", t.primary || CONFIG.theme.primary);
-    root.style.setProperty("--dark", t.dark || CONFIG.theme.dark);
-    root.style.setProperty("--accent", t.accent || CONFIG.theme.accent);
-    root.style.setProperty("--bg", t.background || CONFIG.theme.background);
-    root.style.setProperty("--surface", t.surface || CONFIG.theme.surface);
-    root.style.setProperty("--success", t.success || CONFIG.theme.success);
-    root.style.setProperty("--warning", t.warning || CONFIG.theme.warning);
+    const primary = t.primary || "#2563EB";
+    const ink = t.dark || "#0F172A";
+    root.style.setProperty("--primary", primary);
+    root.style.setProperty("--ink", ink);
+    root.style.setProperty("--dark", ink);
+    root.style.setProperty("--accent", t.accent || "#E11D48");
+    root.style.setProperty("--bg", t.background || "#F1F5F9");
+    root.style.setProperty("--surface", t.surface || "#FFFFFF");
+    root.style.setProperty("--success", t.success || "#059669");
+    root.style.setProperty("--warning", t.warning || "#D97706");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", ink);
   }
 
   function showLogin() {
@@ -90,6 +96,7 @@ const App = (() => {
     wireLogout();
     Pages.registerAll();
     Router.start();
+    if (typeof PWA !== "undefined") PWA.start();
     Api.warm();
     const session = await Auth.restore();
     if (session) {

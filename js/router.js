@@ -2,6 +2,29 @@ const Router = (() => {
   const routes = {};
   const pageHtmlCache = new Map();
 
+  const GROUPS = [
+    {
+      id: "ops",
+      title: "Operations",
+      paths: ["#/dashboard", "#/students", "#/enquiries", "#/fees", "#/pending", "#/reminders", "#/attendance", "#/whatsapp"]
+    },
+    {
+      id: "admin",
+      title: "Admin & finance",
+      paths: ["#/expenses", "#/staff", "#/stock", "#/transport", "#/finance", "#/import", "#/certificates"]
+    },
+    {
+      id: "academics",
+      title: "Academics",
+      paths: ["#/exams", "#/reportcards", "#/timetable", "#/notices"]
+    },
+    {
+      id: "system",
+      title: "System",
+      paths: ["#/settings", "#/users", "#/year"]
+    }
+  ];
+
   function register(path, handler, opts = {}) {
     routes[path] = { handler, ...opts };
   }
@@ -56,24 +79,118 @@ const Router = (() => {
     return items.filter((i) => i.roles.includes(role));
   }
 
+  function primaryMobile(items) {
+    const preferred = ["#/dashboard", "#/students", "#/fees", "#/attendance"];
+    const picked = [];
+    preferred.forEach((p) => {
+      const hit = items.find((i) => i.path === p);
+      if (hit) picked.push(hit);
+    });
+    items.forEach((i) => {
+      if (picked.length < 4 && !picked.includes(i)) picked.push(i);
+    });
+    return picked.slice(0, 4);
+  }
+
+  function closeMore() {
+    const backdrop = document.getElementById("more-backdrop");
+    const drawer = document.getElementById("more-drawer");
+    if (!drawer) return;
+    drawer.classList.remove("open");
+    backdrop.classList.remove("open");
+    setTimeout(() => {
+      drawer.hidden = true;
+      backdrop.hidden = true;
+    }, 280);
+  }
+
+  function openMore() {
+    const items = navItems();
+    const body = document.getElementById("more-drawer-body");
+    const hash = location.hash || "#/dashboard";
+    const byPath = Object.fromEntries(items.map((i) => [i.path, i]));
+    let html = "";
+    GROUPS.forEach((g) => {
+      const links = g.paths.map((p) => byPath[p]).filter(Boolean);
+      if (!links.length) return;
+      html += `<div class="more-group-title">${g.title}</div>`;
+      links.forEach((i) => {
+        html += `<a class="more-link ${hash.startsWith(i.path) ? "active" : ""}" href="${i.path}" data-more-link>
+          <span class="ico">${i.icon}</span><span>${i.label}</span>
+        </a>`;
+      });
+    });
+    // Any leftover items not in groups
+    const grouped = new Set(GROUPS.flatMap((g) => g.paths));
+    const rest = items.filter((i) => !grouped.has(i.path));
+    if (rest.length) {
+      html += `<div class="more-group-title">More</div>`;
+      rest.forEach((i) => {
+        html += `<a class="more-link ${hash.startsWith(i.path) ? "active" : ""}" href="${i.path}" data-more-link>
+          <span class="ico">${i.icon}</span><span>${i.label}</span>
+        </a>`;
+      });
+    }
+    body.innerHTML = html;
+    body.querySelectorAll("[data-more-link]").forEach((a) => {
+      a.addEventListener("click", () => closeMore());
+    });
+
+    const backdrop = document.getElementById("more-backdrop");
+    const drawer = document.getElementById("more-drawer");
+    backdrop.hidden = false;
+    drawer.hidden = false;
+    requestAnimationFrame(() => {
+      backdrop.classList.add("open");
+      drawer.classList.add("open");
+    });
+  }
+
+  function wireMoreOnce() {
+    if (wireMoreOnce.done) return;
+    wireMoreOnce.done = true;
+    document.getElementById("more-close")?.addEventListener("click", closeMore);
+    document.getElementById("more-backdrop")?.addEventListener("click", closeMore);
+  }
+
   function renderNav() {
+    wireMoreOnce();
     const items = navItems();
     const side = document.getElementById("sidebar-nav");
     const bottom = document.getElementById("bottom-nav");
     const hash = location.hash || "#/dashboard";
-    side.innerHTML = items
-      .map(
-        (i) =>
-          `<li><a href="${i.path}" class="${hash.startsWith(i.path) ? "active" : ""}">${i.label}</a></li>`
-      )
-      .join("");
-    const mobile = items.slice(0, 5);
-    bottom.innerHTML = mobile
-      .map(
-        (i) =>
-          `<a href="${i.path}" class="${hash.startsWith(i.path) ? "active" : ""}"><span class="ico">${i.icon}</span>${i.label.split(" ")[0]}</a>`
-      )
-      .join("");
+
+    // Grouped sidebar
+    const byPath = Object.fromEntries(items.map((i) => [i.path, i]));
+    let sideHtml = "";
+    GROUPS.forEach((g) => {
+      const links = g.paths.map((p) => byPath[p]).filter(Boolean);
+      if (!links.length) return;
+      sideHtml += `<li class="nav-section">${g.title}</li>`;
+      links.forEach((i) => {
+        sideHtml += `<li><a href="${i.path}" class="${hash.startsWith(i.path) ? "active" : ""}">${i.label}</a></li>`;
+      });
+    });
+    const grouped = new Set(GROUPS.flatMap((g) => g.paths));
+    items
+      .filter((i) => !grouped.has(i.path))
+      .forEach((i) => {
+        sideHtml += `<li><a href="${i.path}" class="${hash.startsWith(i.path) ? "active" : ""}">${i.label}</a></li>`;
+      });
+    side.innerHTML = sideHtml;
+
+    const primary = primaryMobile(items);
+    const moreActive = !primary.some((i) => hash.startsWith(i.path));
+    bottom.innerHTML =
+      primary
+        .map(
+          (i) =>
+            `<a href="${i.path}" class="${hash.startsWith(i.path) ? "active" : ""}"><span class="ico">${i.icon}</span>${i.label.split(" ")[0]}</a>`
+        )
+        .join("") +
+      `<button type="button" class="more-tab ${moreActive ? "active" : ""}" id="more-tab"><span class="ico">☰</span>More</button>`;
+
+    document.getElementById("more-tab")?.addEventListener("click", openMore);
   }
 
   function skeletonHtml() {
@@ -99,6 +216,7 @@ const Router = (() => {
     }
     App.showShell();
     renderNav();
+    closeMore();
     const hash = location.hash || "#/dashboard";
     const path = hash.split("?")[0];
     const entry = routes[path] || routes["#/dashboard"];
@@ -142,5 +260,5 @@ const Router = (() => {
     window.addEventListener("hashchange", go);
   }
 
-  return { register, go, start, renderNav, navItems, invalidatePage };
+  return { register, go, start, renderNav, navItems, invalidatePage, openMore, closeMore };
 })();

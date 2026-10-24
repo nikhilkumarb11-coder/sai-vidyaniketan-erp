@@ -15,16 +15,18 @@ const CONFIG = {
     academicYear: "2026-27"
   },
   theme: {
-    primary: "#1F8FD0",
-    dark: "#0E3A5F",
-    accent: "#C62F45",
-    background: "#FBF3E4",
+    primary: "#2563EB",
+    dark: "#0F172A",
+    accent: "#E11D48",
+    background: "#F1F5F9",
     surface: "#FFFFFF",
-    success: "#2E9E6B",
-    warning: "#E0A030",
-    headingFont: "Playfair Display",
-    bodyFont: "Poppins"
+    success: "#059669",
+    warning: "#D97706",
+    headingFont: "Plus Jakarta Sans",
+    bodyFont: "Plus Jakarta Sans"
   },
+  /** Base path for GitHub Pages (no trailing slash). Use "" for local root hosting. */
+  basePath: "/sai-vidyaniketan-erp",
   classes: ["Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
   sections: ["A"],
   subjectsByClass: {

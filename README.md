@@ -6,6 +6,16 @@ Professional school ERP for Nursery–10th: students, fees, attendance, exams, W
 
 ---
 
+## Install as an app (PWA)
+
+On phone or desktop (Chrome / Edge / Safari):
+
+1. Open the live site over **HTTPS** (GitHub Pages).
+2. Tap **Install app** (or browser menu → Install / Add to Home Screen).
+3. The ERP opens fullscreen like a native app.
+
+Service worker caches the UI shell for faster reloads. Live data still comes from Apps Script.
+
 ## Quick start (demo mode)
 
 1. Open `index.html` in a browser (or serve the folder with any static server).

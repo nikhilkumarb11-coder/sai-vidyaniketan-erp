@@ -3,24 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0E3A5F" />
+  <meta name="theme-color" content="#0F172A" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SVS ERP" />
   <title>Sai Vidyaniketan School ERP</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/logo.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/app.css" />
   <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
 </head>
 <body>
   <div id="login-view" class="login-page">
-    <div class="login-panel">
-      <div class="login-brand">
-        <img class="login-logo" src="assets/logo.jpg" alt="Sai Vidyaniketan School logo" />
+    <section class="login-hero" aria-label="Brand">
+      <div class="login-hero-inner">
+        <img src="assets/logo.jpg" alt="Sai Vidyaniketan School logo" />
         <h1 id="login-school">Sai Vidyaniketan School</h1>
         <p class="motto" id="login-motto">Knowledge is Wisdom</p>
       </div>
+    </section>
+    <section class="login-side">
       <div class="login-form-wrap">
+        <h2>Sign in</h2>
+        <p class="sub">Access school operations securely</p>
         <form id="login-form">
           <div class="form-row">
             <label for="username">Username</label>
@@ -30,14 +40,15 @@
             <label for="password">Password</label>
             <input id="password" name="password" type="password" autocomplete="current-password" required value="Admin@123" />
           </div>
-          <button class="btn btn-block btn-dark" type="submit">Sign in</button>
+          <button class="btn btn-block" type="submit">Continue</button>
         </form>
         <p class="hint">
           <span data-demo-badge class="hidden">Demo mode · admin / Admin@123</span>
-          <span data-live-badge>School records via secure Apps Script</span>
+          <span data-live-badge>Connected to school records</span>
         </p>
+        <button type="button" class="btn btn-ghost btn-block install-btn hidden" id="install-btn-login" style="margin-top:0.85rem">Install app</button>
       </div>
-    </div>
+    </section>
   </div>
 
   <div id="app-view" class="app-shell hidden">
@@ -53,7 +64,10 @@
       <div class="sidebar-footer">
         <div data-user-name></div>
         <span class="badge badge-info hidden" data-demo-badge>Demo</span>
-        <button type="button" data-logout>Sign out</button>
+        <div class="footer-actions">
+          <button type="button" class="install-btn hidden" id="install-btn-side">Install app</button>
+          <button type="button" data-logout>Sign out</button>
+        </div>
       </div>
     </aside>
 
@@ -61,12 +75,22 @@
       <header class="workspace-bar">
         <img src="assets/logo.jpg" alt="" />
         <strong data-school-short>SVS</strong>
-        <span style="margin-left:auto;font-size:0.82rem;opacity:0.9" data-user-name></span>
+        <button type="button" class="install-btn hidden" id="install-btn-top" style="width:auto;margin-left:auto;padding:0.35rem 0.7rem;font-size:0.75rem">Install</button>
+        <span style="margin-left:0.5rem;font-size:0.82rem;opacity:0.9" data-user-name></span>
       </header>
       <main class="content" id="app-content"></main>
     </div>
 
     <nav class="bottom-nav" id="bottom-nav" aria-label="Mobile"></nav>
+  </div>
+
+  <div class="more-drawer-backdrop" id="more-backdrop" hidden></div>
+  <div class="more-drawer" id="more-drawer" role="dialog" aria-label="All menus" hidden>
+    <div class="more-drawer-head">
+      <h3>All menus</h3>
+      <button type="button" id="more-close" aria-label="Close">✕</button>
+    </div>
+    <div class="more-drawer-body" id="more-drawer-body"></div>
   </div>
 
   <div id="toasts"></div>
@@ -81,6 +105,7 @@
   <script src="js/auth.js"></script>
   <script src="js/router.js"></script>
   <script src="js/pages.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

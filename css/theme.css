@@ -1,29 +1,39 @@
 :root {
-  --primary: #1F8FD0;
-  --primary-soft: rgba(31, 143, 208, 0.12);
-  --dark: #0E3A5F;
-  --dark-2: #0a2c48;
-  --accent: #C62F45;
-  --accent-soft: rgba(198, 47, 69, 0.1);
-  --bg: #F7F1E6;
-  --bg-2: #EFE6D6;
+  /* Professional product palette (logo used as brand mark only) */
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-soft: rgba(37, 99, 235, 0.1);
+  --ink: #0F172A;
+  --ink-2: #1E293B;
+  --muted: #64748B;
+  --muted-2: #94A3B8;
+  --bg: #F1F5F9;
+  --bg-elevated: #F8FAFC;
   --surface: #FFFFFF;
-  --success: #2E9E6B;
-  --warning: #C4891A;
-  --text: #142433;
-  --muted: #5C6B7A;
-  --border: rgba(14, 58, 95, 0.1);
-  --border-strong: rgba(14, 58, 95, 0.18);
-  --shadow: 0 1px 0 rgba(14, 58, 95, 0.04), 0 12px 32px rgba(14, 58, 95, 0.06);
-  --shadow-lg: 0 24px 60px rgba(8, 30, 50, 0.18);
+  --accent: #E11D48;
+  --accent-soft: rgba(225, 29, 72, 0.1);
+  --success: #059669;
+  --warning: #D97706;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.12);
   --radius: 12px;
   --radius-sm: 8px;
-  --font-heading: "Playfair Display", Georgia, "Times New Roman", serif;
-  --font-body: "Poppins", "Segoe UI", system-ui, sans-serif;
-  --sidebar-w: 248px;
-  --topbar-h: 58px;
-  --bottom-h: 68px;
+  --radius-lg: 16px;
+  --font: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --sidebar-w: 260px;
+  --topbar-h: 56px;
+  --bottom-h: 64px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Back-compat aliases used across older markup */
+  --dark: var(--ink);
+  --dark-2: var(--ink-2);
+  --text: var(--ink);
+  --font-heading: var(--font-display);
+  --font-body: var(--font);
 }
 
 *,
@@ -37,32 +47,23 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  font-family: var(--font-body);
-  color: var(--text);
+  font-family: var(--font);
+  color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-body {
-  background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(31, 143, 208, 0.08), transparent 55%),
-    radial-gradient(900px 400px at 100% 0%, rgba(198, 47, 69, 0.05), transparent 50%),
-    linear-gradient(180deg, #FBF6EC 0%, var(--bg) 40%, #F3EBD9 100%);
-  background-attachment: fixed;
-}
-
 h1,
 h2,
 h3,
-h4,
-.brand-font {
-  font-family: var(--font-heading);
-  color: var(--dark);
+h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   margin: 0 0 0.35em;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 a {
@@ -74,10 +75,10 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
 }
 
 ::selection {
   background: var(--primary-soft);
-  color: var(--dark);
+  color: var(--ink);
 }
