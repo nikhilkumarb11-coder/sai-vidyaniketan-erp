@@ -2097,19 +2097,22 @@ body.receipt-viewer-open {
 .chart-bars {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  height: 160px;
-  padding-top: 0.35rem;
+  gap: 4px;
+  height: 200px;
+  padding: 0.35rem 0.25rem 0;
+  overflow: visible;
 }
 
 .chart-bars .bar-wrap {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   height: 100%;
   justify-content: flex-end;
-  min-width: 0;
+  min-width: 1.6rem;
+  padding-bottom: 2.6rem;
+  position: relative;
 }
 
 .chart-bars .bar {
@@ -2222,14 +2225,19 @@ body.receipt-viewer-open {
 }
 
 .chart-bars .lbl {
-  font-size: 0.62rem;
+  position: absolute;
+  left: 50%;
+  bottom: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
   color: var(--muted);
-  margin-top: 5px;
-  text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  transform: translateX(-30%) rotate(-40deg);
+  transform-origin: left center;
+  max-width: none;
+  overflow: visible;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .skeleton-page {

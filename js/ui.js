@@ -91,7 +91,7 @@ const UI = (() => {
     const build =
       (typeof CONFIG !== "undefined" && CONFIG.appVersion) ||
       (typeof window !== "undefined" && window.__SVS_BUILD__) ||
-      "34";
+      "35";
     const w = window.open("", "_blank");
     w.document.write(`<!doctype html><html><head><title>Print</title>
       <meta name="viewport" content="width=device-width, initial-scale=1" />

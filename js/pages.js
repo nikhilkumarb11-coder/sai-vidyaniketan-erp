@@ -86,9 +86,9 @@ const Pages = (() => {
                   const n = enrollment[c] || 0;
                   const h = Math.max(8, Math.round((n / max) * 100));
                   const color = barPalette[i % barPalette.length];
-                  return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl">${UI.esc(
+                  return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl" title="${UI.esc(
                     c
-                  )}</div></div>`;
+                  )}">${UI.esc(c)}</div></div>`;
                 })
                 .join("")}
             </div>
