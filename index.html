@@ -17,6 +17,20 @@
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/app.css" />
   <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
+  <!-- Hide login instantly if a token exists — prevents mobile PWA refresh flash -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("svs_token") || sessionStorage.getItem("svs_token")) {
+          document.documentElement.classList.add("has-session");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    html.has-session #login-view { display: none !important; }
+    html.has-session #app-view.hidden { display: flex !important; }
+  </style>
 </head>
 <body>
   <div id="login-view" class="login-page">

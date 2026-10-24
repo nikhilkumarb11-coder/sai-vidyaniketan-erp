@@ -39,16 +39,31 @@ const Auth = (() => {
 
   /** Load token + profile from localStorage into memory (sync, before any network). */
   function hydrateFromStorage() {
+    if (!Api.getToken()) return null;
     const cached = readPersistedSession();
-    if (cached && cached.user && Api.getToken()) {
+    if (cached && cached.user) {
       AppCache.set(cached);
       return cached;
     }
-    return null;
+    // Token without profile (older installs / interrupted login) — keep shell usable
+    if (!AppCache.user()) {
+      AppCache.set({
+        user: { displayName: "Loading…", username: "", role: "Teacher" },
+        school: (typeof CONFIG !== "undefined" && CONFIG.school) || {},
+        modules: (typeof CONFIG !== "undefined" && CONFIG.modulesDefault) || {},
+        academicYear: (typeof CONFIG !== "undefined" && CONFIG.school && CONFIG.school.academicYear) || "",
+        theme: (typeof CONFIG !== "undefined" && CONFIG.theme) || {},
+        classFees: (typeof CONFIG !== "undefined" && CONFIG.classFees) || {},
+        subjectsByClass: (typeof CONFIG !== "undefined" && CONFIG.subjectsByClass) || {},
+        whatsappTemplates: (typeof CONFIG !== "undefined" && CONFIG.whatsappTemplates) || {},
+        grading: (typeof CONFIG !== "undefined" && CONFIG.grading) || {}
+      });
+    }
+    return AppCache.get();
   }
 
   function hasLocalSession() {
-    return !!(Api.getToken() && (AppCache.user() || (readPersistedSession() && readPersistedSession().user)));
+    return !!Api.getToken();
   }
 
   function isAuthError(e) {
@@ -73,6 +88,9 @@ const Auth = (() => {
     Api.clearToken();
     clearPersistedSession();
     AppCache.clear();
+    try {
+      document.documentElement.classList.remove("has-session");
+    } catch (e) {}
   }
 
   function refreshBootstrapInBackground() {
@@ -87,6 +105,9 @@ const Auth = (() => {
         // Only kick to login when the server says the session is truly dead
         if (isAuthError(e)) {
           forceLocalLogout();
+          try {
+            document.documentElement.classList.remove("has-session");
+          } catch (err) {}
           if (typeof App !== "undefined" && App.showLogin) {
             App.showLogin();
             if (typeof UI !== "undefined") UI.toast("Session expired — please sign in again", "error");

@@ -223,10 +223,15 @@ const Router = (() => {
   }
 
   async function go() {
+    // Prefer local token over empty cache — never flash login while restore is in flight
     if (!AppCache.user()) {
+      if (typeof Auth !== "undefined" && Auth.hydrateFromStorage) Auth.hydrateFromStorage();
+    }
+    if (!AppCache.user() && !(typeof Api !== "undefined" && Api.getToken && Api.getToken())) {
       App.showLogin();
       return;
     }
+    if (!AppCache.user()) return;
     App.showShell();
     renderNav();
     closeMore();

@@ -23,14 +23,15 @@ const PWA = (() => {
   async function register() {
     if (!("serviceWorker" in navigator)) return;
     try {
-      const reg = await navigator.serviceWorker.register("sw.js?v=12", { scope: "./" });
+      const reg = await navigator.serviceWorker.register("sw.js?v=13", { scope: "./" });
       // Pick up new SW immediately so auth fixes are not stuck behind cache-first
       if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
       reg.update().catch(() => {});
       navigator.serviceWorker.addEventListener("controllerchange", () => {
-        // Avoid loops: only reload once per update
+        // Mobile PWAs often keep the old shell until a hard reload — do it once
         if (register._reloaded) return;
         register._reloaded = true;
+        location.reload();
       });
     } catch (e) {
       console.warn("SW register failed", e);

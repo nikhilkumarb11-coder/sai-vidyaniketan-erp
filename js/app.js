@@ -18,12 +18,18 @@ const App = (() => {
   }
 
   function showLogin() {
+    try {
+      document.documentElement.classList.remove("has-session");
+    } catch (e) {}
     document.getElementById("login-view").classList.remove("hidden");
     document.getElementById("app-view").classList.add("hidden");
     Api.warm();
   }
 
   function showShell() {
+    try {
+      document.documentElement.classList.add("has-session");
+    } catch (e) {}
     document.getElementById("login-view").classList.add("hidden");
     document.getElementById("app-view").classList.remove("hidden");
     applyTheme();
@@ -34,8 +40,9 @@ const App = (() => {
     document.querySelectorAll("[data-school-short]").forEach((el) => {
       el.textContent = school.shortName || CONFIG.school.shortName || "SVS";
     });
+    const user = AppCache.user() || {};
     document.querySelectorAll("[data-user-name]").forEach((el) => {
-      el.textContent = AppCache.user().displayName || AppCache.user().username;
+      el.textContent = user.displayName || user.username || "";
     });
     updateModeBadges();
   }
@@ -91,29 +98,32 @@ const App = (() => {
     applyTheme();
     document.getElementById("login-motto").textContent = CONFIG.school.motto;
     document.getElementById("login-school").textContent = CONFIG.school.name;
+
+    // Hydrate BEFORE wiring router — refresh must never flash the login form
+    Auth.hydrateFromStorage();
+    const stayIn = Auth.hasLocalSession();
+    if (stayIn) showShell();
+
     updateModeBadges();
     wireLogin();
     wireLogout();
     Pages.registerAll();
-    Router.start();
     if (typeof PWA !== "undefined") PWA.start();
     Api.warm();
+    Router.start();
 
-    // Sync hydrate from localStorage BEFORE any network — refresh must not flash login
-    Auth.hydrateFromStorage();
-    if (Auth.hasLocalSession()) {
+    if (stayIn) {
       if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
-      showShell();
       try {
         await Router.go();
       } catch (e) {}
-      // Sync in background (does not send user to login on network errors)
       Auth.restore().catch(() => {});
       return;
     }
 
     const session = await Auth.restore();
     if (session) {
+      showShell();
       if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
       await Router.go();
     } else {
