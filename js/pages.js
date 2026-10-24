@@ -258,7 +258,7 @@ const Pages = (() => {
           reference: UI.formVal(backdrop, "reference"),
           notes: UI.formVal(backdrop, "notes")
         });
-        printReceipt(receipt);
+        await printReceipt(receipt);
         UI.toast("Receipt " + receipt.receiptNo, "ok");
         if (onDone) onDone();
         return true;
@@ -282,12 +282,12 @@ const Pages = (() => {
     });
   }
 
-  function printReceipt(r) {
-    ReceiptPdf.open(r);
+  async function printReceipt(r) {
+    await ReceiptPdf.open(r);
   }
 
-  function viewReceipt(r) {
-    ReceiptPdf.open(r);
+  async function viewReceipt(r) {
+    await ReceiptPdf.open(r);
   }
 
   async function shareReceipt(r) {
