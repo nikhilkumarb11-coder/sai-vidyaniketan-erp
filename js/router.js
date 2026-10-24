@@ -5,12 +5,12 @@ const Router = (() => {
   const GROUPS = [
     {
       id: "home",
-      title: "Overview",
+      title: "Home",
       paths: ["#/dashboard"]
     },
     {
       id: "people",
-      title: "People",
+      title: "Students & staff",
       paths: ["#/students", "#/enquiries", "#/attendance"]
     },
     {
@@ -20,22 +20,22 @@ const Router = (() => {
     },
     {
       id: "academics",
-      title: "Academics",
+      title: "Class work",
       paths: ["#/exams", "#/reportcards", "#/timetable", "#/notices"]
     },
     {
       id: "comms",
-      title: "Communication",
+      title: "Messages",
       paths: ["#/whatsapp"]
     },
     {
       id: "admin",
-      title: "Admin",
+      title: "Office",
       paths: ["#/expenses", "#/staff", "#/stock", "#/transport", "#/certificates", "#/finance", "#/import"]
     },
     {
       id: "system",
-      title: "System",
+      title: "Setup",
       paths: ["#/settings", "#/users", "#/year"]
     }
   ];
@@ -48,11 +48,11 @@ const Router = (() => {
     const principal = Auth.isPrincipal();
     const m = AppCache.modules();
     const items = [];
-    items.push({ path: "#/dashboard", label: "Dashboard", icon: "⌂", roles: ["Principal", "Teacher"] });
+    items.push({ path: "#/dashboard", label: "Home", icon: "⌂", roles: ["Principal", "Teacher"] });
     if (principal) {
       items.push({ path: "#/students", label: "Students", icon: "👤", roles: ["Principal"] });
       if (m.enquiries !== false) {
-        items.push({ path: "#/enquiries", label: "Enquiries", icon: "✉", roles: ["Principal"] });
+        items.push({ path: "#/enquiries", label: "Admission calls", icon: "✉", roles: ["Principal"] });
       }
       items.push({ path: "#/fees", label: "Fees", icon: "₹", roles: ["Principal"] });
     }
@@ -61,19 +61,19 @@ const Router = (() => {
       items.push({ path: "#/whatsapp", label: "WhatsApp", icon: "💬", roles: ["Principal"] });
     }
     if (principal && m.expenses !== false) {
-      items.push({ path: "#/expenses", label: "Expenses", icon: "▤", roles: ["Principal"] });
+      items.push({ path: "#/expenses", label: "Spending", icon: "▤", roles: ["Principal"] });
     }
     if (principal && m.staff !== false) {
       items.push({ path: "#/staff", label: "Staff", icon: "👥", roles: ["Principal"] });
     }
     if (principal && m.stock !== false) {
-      items.push({ path: "#/stock", label: "Stock", icon: "▣", roles: ["Principal"] });
+      items.push({ path: "#/stock", label: "School store", icon: "▣", roles: ["Principal"] });
     }
     if (principal && m.transport) {
-      items.push({ path: "#/transport", label: "Transport", icon: "🚌", roles: ["Principal"] });
+      items.push({ path: "#/transport", label: "Bus routes", icon: "🚌", roles: ["Principal"] });
     }
     if (m.exams !== false) {
-      items.push({ path: "#/exams", label: "Exams", icon: "📝", roles: ["Principal", "Teacher"] });
+      items.push({ path: "#/exams", label: "Marks", icon: "📝", roles: ["Principal", "Teacher"] });
       items.push({ path: "#/reportcards", label: "Report cards", icon: "📄", roles: ["Principal", "Teacher"] });
     }
     if (m.timetable !== false) {
@@ -84,11 +84,11 @@ const Router = (() => {
       items.push({ path: "#/certificates", label: "Certificates", icon: "🎖", roles: ["Principal"] });
     }
     if (principal) {
-      items.push({ path: "#/finance", label: "Finance", icon: "📊", roles: ["Principal"] });
-      items.push({ path: "#/import", label: "Import", icon: "⇩", roles: ["Principal"] });
+      items.push({ path: "#/finance", label: "Accounts", icon: "📊", roles: ["Principal"] });
+      items.push({ path: "#/import", label: "Upload list", icon: "⇩", roles: ["Principal"] });
       items.push({ path: "#/settings", label: "Settings", icon: "⚙", roles: ["Principal"] });
-      items.push({ path: "#/users", label: "Users", icon: "🔑", roles: ["Principal"] });
-      items.push({ path: "#/year", label: "Year close", icon: "🗓", roles: ["Principal"] });
+      items.push({ path: "#/users", label: "Logins", icon: "🔑", roles: ["Principal"] });
+      items.push({ path: "#/year", label: "New school year", icon: "🗓", roles: ["Principal"] });
     }
     const role = AppCache.user().role;
     return items.filter((i) => i.roles.includes(role));
@@ -242,7 +242,7 @@ const Router = (() => {
     const cacheKey = path;
 
     if (entry.principalOnly && !Auth.isPrincipal()) {
-      root.innerHTML = `<div class="card"><p>You do not have access to this page.</p></div>`;
+      root.innerHTML = `<div class="card"><p>You cannot open this screen with your login.</p></div>`;
       return;
     }
 

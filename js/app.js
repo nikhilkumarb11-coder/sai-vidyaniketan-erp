@@ -79,7 +79,7 @@ const App = (() => {
       btn.addEventListener("click", async () => {
         await Auth.logout();
         showLogin();
-        UI.toast("Logged out");
+        UI.toast("You are logged out");
       });
     });
   }

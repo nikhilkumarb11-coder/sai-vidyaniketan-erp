@@ -35,25 +35,25 @@ const Pages = (() => {
       root.innerHTML = `
         <div class="page-header page-header-compact">
           <div>
-            <h2>Dashboard</h2>
+            <h2>Home</h2>
             <p class="page-sub">${UI.esc(AppCache.get().academicYear || "")}</p>
           </div>
         </div>
         <div class="quick-actions" aria-label="Quick actions">
-          <a class="qa-item qa-dark" href="#/fees"><span class="qa-ico">₹</span><span>Collect</span></a>
-          <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attend</span></a>
-          <a class="qa-item" href="#/students"><span class="qa-ico">+</span><span>Admit</span></a>
+          <a class="qa-item qa-dark" href="#/fees"><span class="qa-ico">₹</span><span>Take fee</span></a>
+          <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attendance</span></a>
+          <a class="qa-item" href="#/students"><span class="qa-ico">+</span><span>New student</span></a>
           <a class="qa-item qa-accent" href="#/reminders"><span class="qa-ico">!</span><span>Remind${d.reminderCount ? ` (${d.reminderCount})` : ""}</span></a>
         </div>
         <div class="grid grid-4 stats-row">
           <div class="stat"><div class="label">Students</div><div class="value">${d.totalStudents}</div></div>
-          <div class="stat"><div class="label">Fee today</div><div class="value ok">${UI.money(d.fees.today)}</div></div>
-          <div class="stat"><div class="label">Pending</div><div class="value accent">${UI.money(d.fees.pendingTotal)}</div></div>
-          <div class="stat"><div class="label">Attendance</div><div class="value">${d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—"}</div></div>
+          <div class="stat"><div class="label">Fees today</div><div class="value ok">${UI.money(d.fees.today)}</div></div>
+          <div class="stat"><div class="label">Fees due</div><div class="value accent">${UI.money(d.fees.pendingTotal)}</div></div>
+          <div class="stat"><div class="label">Present today</div><div class="value">${d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—"}</div></div>
         </div>
         <div class="grid grid-2" style="margin-top:1rem">
           <div class="card">
-            <h3>Class-wise enrollment</h3>
+            <h3>Students in each class</h3>
             <div class="chart-bars">
               ${classes
                 .map((c) => {
@@ -65,26 +65,26 @@ const Pages = (() => {
             </div>
           </div>
           <div class="card">
-            <h3>Top defaulters</h3>
-            <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Class</th><th>Balance</th></tr></thead>
+            <h3>Highest fees still due</h3>
+            <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Class</th><th>Amount due</th></tr></thead>
             <tbody>${(d.fees.topDefaulters || [])
               .map((x) => `<tr><td>${UI.esc(x.name)}</td><td>${UI.esc(x.className)}</td><td>${UI.money(x.balance)}</td></tr>`)
               .join("") || `<tr><td colspan="3" class="empty">None</td></tr>`}</tbody></table></div>
-            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">This month expenses: ${UI.money(d.expenseMonth)} · Collection this month: ${UI.money(d.fees.month)}</p>
+            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">Spent this month: ${UI.money(d.expenseMonth)} · Fees collected this month: ${UI.money(d.fees.month)}</p>
           </div>
         </div>
         <div class="grid grid-2">
           ${
             AppCache.isModuleOn("enquiries")
-              ? `<div class="card"><h3>Open enquiries</h3>
-            ${(d.enquiries || []).map((e) => `<div class="check-item"><span>${UI.esc(e.name)} · ${UI.esc(e.classSought)}</span><a class="btn btn-sm btn-ghost" href="#/enquiries">Open</a></div>`).join("") || "<p class='empty'>No open enquiries</p>"}
+              ? `<div class="card"><h3>Admission calls to follow</h3>
+            ${(d.enquiries || []).map((e) => `<div class="check-item"><span>${UI.esc(e.name)} · ${UI.esc(e.classSought)}</span><a class="btn btn-sm btn-ghost" href="#/enquiries">Open</a></div>`).join("") || "<p class='empty'>No open calls</p>"}
           </div>`
               : ""
           }
-          <div class="card"><h3>Alerts</h3>
-            ${(d.lowStock || []).map((i) => `<div class="check-item"><span class="badge badge-warn">Low stock</span> ${UI.esc(i.name)} (${i.qty})</div>`).join("")}
+          <div class="card"><h3>Reminders</h3>
+            ${(d.lowStock || []).map((i) => `<div class="check-item"><span class="badge badge-warn">Low in store</span> ${UI.esc(i.name)} (${i.qty})</div>`).join("")}
             ${(d.birthdays || []).map((b) => `<div class="check-item"><span class="badge badge-info">Birthday</span> ${UI.esc(b.name)}</div>`).join("")}
-            ${!(d.lowStock || []).length && !(d.birthdays || []).length ? "<p class='empty'>No alerts</p>" : ""}
+            ${!(d.lowStock || []).length && !(d.birthdays || []).length ? "<p class='empty'>Nothing to show</p>" : ""}
           </div>
         </div>`;
     } else {
@@ -119,27 +119,27 @@ const Pages = (() => {
       const list = await Api.call("students.list", { q, className, includeAllStatuses: true });
       root.innerHTML = `
         <div class="page-header">
-          <div><h2>Students</h2><p>Admissions and profiles</p></div>
-          <button class="btn" id="btn-add-student">+ New admission</button>
+          <div><h2>Students</h2><p>Add students and see their details</p></div>
+          <button class="btn" id="btn-add-student">+ Add student</button>
         </div>
         <div class="toolbar">
-          <input name="q" placeholder="Search name / admission / phone" value="${UI.esc(q)}" />
+          <input name="q" placeholder="Search by name, admission no. or phone" value="${UI.esc(q)}" />
           <select name="className"><option value="">All classes</option>${UI.classOptions(className)}</select>
-          <button class="btn btn-ghost" id="btn-search">Search</button>
+          <button class="btn btn-ghost" id="btn-search">Find</button>
         </div>
         <div class="card table-wrap"><table class="data">
-          <thead><tr><th>Adm No</th><th>Name</th><th>Class</th><th>Parent</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Adm. no.</th><th>Name</th><th>Class</th><th>Parent</th><th>Phone</th><th>Status</th><th></th></tr></thead>
           <tbody>${list
             .map(
               (s) => `<tr>
-              <td data-label="Adm No">${UI.esc(s.admissionNo)}</td>
+              <td data-label="Adm. no.">${UI.esc(s.admissionNo)}</td>
               <td data-label="Name">${UI.esc(s.name)}</td>
               <td data-label="Class">${UI.esc(s.className)}-${UI.esc(s.section || "A")}</td>
               <td data-label="Parent">${UI.esc(s.parentName)}</td>
               <td data-label="Phone">${UI.esc(s.phone)}</td>
               <td data-label="Status"><span class="badge ${s.status === "Active" ? "badge-ok" : "badge-warn"}">${UI.esc(s.status || "Active")}</span></td>
               <td class="row-actions"><button class="btn btn-sm btn-ghost" data-view="${s.id}">View</button>
-                  <button class="btn btn-sm" data-fee="${s.id}">Fee</button></td></tr>`
+                  <button class="btn btn-sm" data-fee="${s.id}">Take fee</button></td></tr>`
             )
             .join("")}</tbody></table></div>`;
       root.querySelector("#btn-search").onclick = render;
@@ -160,39 +160,39 @@ const Pages = (() => {
     const fees = AppCache.classFees();
     const defaultClass = s.className || "1";
     await UI.modal({
-      title: existing ? "Edit student" : "New admission",
+      title: existing ? "Edit student" : "Add student",
       submitLabel: "Save",
       body: `
         <div class="form-grid">
-          <div class="form-row"><label>Name *</label><input name="name" value="${UI.esc(s.name || "")}" required maxlength="80"></div>
+          <div class="form-row"><label>Student name *</label><input name="name" value="${UI.esc(s.name || "")}" required maxlength="80"></div>
           <div class="form-row"><label>Class *</label><select name="className">${UI.classOptions(defaultClass)}</select></div>
-          <div class="form-row"><label>Parent / Guardian *</label><input name="parentName" value="${UI.esc(s.parentName || "")}" maxlength="80"></div>
-          <div class="form-row"><label>Phone * (10 digits)</label>
+          <div class="form-row"><label>Parent / guardian *</label><input name="parentName" value="${UI.esc(s.parentName || "")}" maxlength="80"></div>
+          <div class="form-row"><label>Mobile number * (10 digits)</label>
             <input name="phone" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" value="${UI.esc(UI.digitsOnly(s.phone || "", 10))}" placeholder="10-digit mobile">
           </div>
-          <div class="form-row"><label>Annual fee *</label><input name="annualFee" type="number" min="0" step="1" value="${s.annualFee != null ? s.annualFee : fees[defaultClass] || 20000}"></div>
-          <div class="form-row"><label>Concession</label><input name="concession" type="number" min="0" step="1" value="${s.concession || 0}"></div>
-          <div class="form-row"><label>Concession reason</label><input name="concessionReason" value="${UI.esc(s.concessionReason || "")}"></div>
-          <div class="form-row"><label>Pay-by date</label><input name="payByDate" type="date" value="${UI.esc(s.payByDate || "")}"></div>
-          <div class="form-row"><label>Gender</label><select name="gender"><option value="">—</option><option ${s.gender==="M"?"selected":""}>M</option><option ${s.gender==="F"?"selected":""}>F</option></select></div>
-          <div class="form-row"><label>DOB</label><input name="dob" type="date" value="${UI.esc(s.dob || "")}" max="${new Date().toISOString().slice(0, 10)}">
-            <div class="field-hint" data-age>${s.dob ? "Age: " + UI.ageFromDob(s.dob) : "Age appears after DOB"}</div>
+          <div class="form-row"><label>Yearly fee *</label><input name="annualFee" type="number" min="0" step="1" value="${s.annualFee != null ? s.annualFee : fees[defaultClass] || 20000}"></div>
+          <div class="form-row"><label>Fee discount</label><input name="concession" type="number" min="0" step="1" value="${s.concession || 0}"></div>
+          <div class="form-row"><label>Discount reason</label><input name="concessionReason" value="${UI.esc(s.concessionReason || "")}"></div>
+          <div class="form-row"><label>Pay by date</label><input name="payByDate" type="date" value="${UI.esc(s.payByDate || "")}"></div>
+          <div class="form-row"><label>Gender</label><select name="gender"><option value="">—</option><option value="M" ${s.gender==="M"?"selected":""}>Boy</option><option value="F" ${s.gender==="F"?"selected":""}>Girl</option></select></div>
+          <div class="form-row"><label>Date of birth</label><input name="dob" type="date" value="${UI.esc(s.dob || "")}" max="${new Date().toISOString().slice(0, 10)}">
+            <div class="field-hint" data-age>${s.dob ? "Age: " + UI.ageFromDob(s.dob) : "Age shows after you pick DOB"}</div>
           </div>
           <div class="form-row" style="grid-column:1/-1"><label>Address</label><input name="address" value="${UI.esc(s.address || "")}"></div>
-          <div class="form-row" style="grid-column:1/-1"><label>Sibling group ID (optional)</label><input name="siblingGroupId" value="${UI.esc(s.siblingGroupId || "")}" placeholder="Same ID links siblings"></div>
+          <div class="form-row" style="grid-column:1/-1"><label>Sibling code (optional)</label><input name="siblingGroupId" value="${UI.esc(s.siblingGroupId || "")}" placeholder="Same code for brothers / sisters"></div>
         </div>
-        <h4 style="margin:1rem 0 0.5rem">Services</h4>
+        <h4 style="margin:1rem 0 0.5rem">Extra services</h4>
         ${services
           .map(
             (svc) =>
               `<label class="check-item"><input type="checkbox" name="svc_${svc.id}" data-cost="${svc.cost}" data-name="${UI.esc(svc.name)}" checked> ${UI.esc(svc.name)} — ${UI.money(svc.cost)}</label>`
           )
           .join("")}
-        <h4 style="margin:1rem 0 0.5rem">Installments (optional)</h4>
+        <h4 style="margin:1rem 0 0.5rem">Fee terms (optional)</h4>
         <div class="form-grid">
-          <div class="form-row"><label>Term 1 due</label><input name="inst1date" type="date"><input name="inst1amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
-          <div class="form-row"><label>Term 2 due</label><input name="inst2date" type="date"><input name="inst2amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
-          <div class="form-row"><label>Term 3 due</label><input name="inst3date" type="date"><input name="inst3amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 1 due date</label><input name="inst1date" type="date"><input name="inst1amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 2 due date</label><input name="inst2date" type="date"><input name="inst2amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
+          <div class="form-row"><label>Term 3 due date</label><input name="inst3date" type="date"><input name="inst3amt" type="number" min="0" placeholder="Amount" style="margin-top:0.35rem"></div>
         </div>`,
       onReady: (backdrop) => {
         const phone = backdrop.querySelector("[name=phone]");
@@ -276,7 +276,7 @@ const Pages = (() => {
       body: `
         <p><strong>${UI.esc(s.admissionNo)}</strong> · ${UI.esc(s.className)}-${UI.esc(s.section || "A")} · ${UI.esc(s.status)}</p>
         <p>Parent: ${UI.esc(s.parentName)} · ${UI.esc(s.phone)}</p>
-        <p>Annual fee ${UI.money(s.annualFee)} · Concession ${UI.money(s.concession)} · Paid ${UI.money(s.paidTotal)} · <strong>Balance ${UI.money(s.balance)}</strong></p>
+        <p>Yearly fee ${UI.money(s.annualFee)} · Discount ${UI.money(s.concession)} · Paid ${UI.money(s.paidTotal)} · <strong>Due ${UI.money(s.balance)}</strong></p>
         <p>Services: ${(s.optedServices || []).map((x) => x.serviceName + " (" + UI.money(x.cost) + ")").join(", ") || "—"}</p>`,
       onSubmit: async () => {
         await openStudentForm(s, onDone);
@@ -288,16 +288,16 @@ const Pages = (() => {
   async function openCollectFee(studentId, onDone) {
     const s = await Api.call("students.get", { id: studentId });
     await UI.modal({
-      title: "Collect fee — " + s.name,
-      submitLabel: "Collect & print",
+      title: "Take fee — " + s.name,
+      submitLabel: "Save & print receipt",
       body: `
-        <p>Balance: <strong class="badge badge-danger">${UI.money(s.balance)}</strong></p>
+        <p>Amount due: <strong class="badge badge-danger">${UI.money(s.balance)}</strong></p>
         <div class="form-grid">
-          <div class="form-row"><label>Amount</label><input name="amount" type="number" value="${s.balance}"></div>
-          <div class="form-row"><label>Mode</label>
+          <div class="form-row"><label>Amount paid</label><input name="amount" type="number" value="${s.balance}"></div>
+          <div class="form-row"><label>Paid by</label>
             <select name="mode"><option>Cash</option><option>UPI</option><option>Cheque</option><option>Other</option></select></div>
-          <div class="form-row"><label>Reference</label><input name="reference"></div>
-          <div class="form-row"><label>Notes</label><input name="notes"></div>
+          <div class="form-row"><label>UPI / cheque no. (if any)</label><input name="reference"></div>
+          <div class="form-row"><label>Note</label><input name="notes"></div>
         </div>`,
       onSubmit: async (backdrop) => {
         const amount = Number(UI.formVal(backdrop, "amount"));
@@ -357,31 +357,31 @@ const Pages = (() => {
 
   async function enquiriesPage(root) {
     if (!AppCache.isModuleOn("enquiries")) {
-      root.innerHTML = `<div class="card"><p>Enquiries module is turned off. Enable it under Settings → Modules.</p></div>`;
+      root.innerHTML = `<div class="card"><p>Admission calls are turned off. Turn them on in Settings → Features.</p></div>`;
       return;
     }
     const list = await Api.call("enquiries.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Enquiries</h2><p>Pre-admission tracking</p></div>
-        <button class="btn" id="btn-enq">+ Enquiry</button></div>
+      <div class="page-header"><div><h2>Admission calls</h2><p>Parents who asked about joining</p></div>
+        <button class="btn" id="btn-enq">+ Add call</button></div>
       <div class="card table-wrap"><table class="data">
-        <thead><tr><th>Name</th><th>Phone</th><th>Class</th><th>Follow-up</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Phone</th><th>Class</th><th>Call back on</th><th>Status</th><th></th></tr></thead>
         <tbody>${list
           .map(
             (e) => `<tr><td>${UI.esc(e.name)}</td><td>${UI.esc(e.phone)}</td><td>${UI.esc(e.classSought)}</td>
             <td>${UI.esc(e.followUpDate)}</td><td>${UI.esc(e.status)}</td>
-            <td>${e.status === "Open" ? `<button class="btn btn-sm" data-convert="${e.id}">Admit</button>` : ""}</td></tr>`
+            <td>${e.status === "Open" ? `<button class="btn btn-sm" data-convert="${e.id}">Make student</button>` : ""}</td></tr>`
           )
           .join("")}</tbody></table></div>`;
     root.querySelector("#btn-enq").onclick = async () => {
       await UI.modal({
-        title: "New enquiry",
+        title: "New admission call",
         body: `<div class="form-grid">
-          <div class="form-row"><label>Name</label><input name="name"></div>
+          <div class="form-row"><label>Child's name</label><input name="name"></div>
           <div class="form-row"><label>Phone (10 digits)</label><input name="phone" inputmode="numeric" maxlength="10"></div>
-          <div class="form-row"><label>Class sought</label><select name="classSought">${UI.classOptions("1")}</select></div>
-          <div class="form-row"><label>Follow-up</label><input name="followUpDate" type="date"></div>
-          <div class="form-row" style="grid-column:1/-1"><label>Notes</label><input name="notes"></div></div>`,
+          <div class="form-row"><label>Class wanted</label><select name="classSought">${UI.classOptions("1")}</select></div>
+          <div class="form-row"><label>Call back on</label><input name="followUpDate" type="date"></div>
+          <div class="form-row" style="grid-column:1/-1"><label>Note</label><input name="notes"></div></div>`,
         onReady: (b) => {
           const phone = b.querySelector("[name=phone]");
           phone.addEventListener("input", () => {
@@ -407,7 +407,7 @@ const Pages = (() => {
     root.querySelectorAll("[data-convert]").forEach((btn) => {
       btn.onclick = async () => {
         await Api.call("enquiries.convert", { id: btn.dataset.convert, student: {} });
-        UI.toast("Converted to admission", "ok");
+          UI.toast("Added as student", "ok");
         enquiriesPage(root);
       };
     });
@@ -465,7 +465,7 @@ const Pages = (() => {
 
       const collectHtml = `
         <div class="card table-wrap"><table class="data">
-          <thead><tr><th>Student</th><th>Class</th><th>Balance</th><th></th></tr></thead>
+          <thead><tr><th>Student</th><th>Class</th><th>Amount due</th><th></th></tr></thead>
           <tbody>${
             pendingFiltered.length
               ? pendingFiltered
@@ -473,19 +473,19 @@ const Pages = (() => {
                     (s) => `<tr>
                 <td data-label="Student">${UI.esc(s.name)}</td>
                 <td data-label="Class">${UI.esc(s.className)}</td>
-                <td data-label="Balance">${UI.money(s.balance)}</td>
-                <td class="row-actions"><button class="btn btn-sm" data-fee="${s.id}">Collect</button></td></tr>`
+                <td data-label="Amount due">${UI.money(s.balance)}</td>
+                <td class="row-actions"><button class="btn btn-sm" data-fee="${s.id}">Take fee</button></td></tr>`
                   )
                   .join("")
-              : `<tr><td colspan="4" class="empty">No matching students with balance</td></tr>`
+              : `<tr><td colspan="4" class="empty">No students with fees due</td></tr>`
           }</tbody></table></div>`;
 
       const pendingHtml = `
         <div class="toolbar" style="margin-top:0">
-          <button type="button" class="btn btn-ghost" id="export-pending">Export CSV</button>
+          <button type="button" class="btn btn-ghost" id="export-pending">Download list</button>
         </div>
         <div class="card table-wrap"><table class="data">
-          <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Balance</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Amount due</th><th></th></tr></thead>
           <tbody>${
             pendingFiltered.length
               ? pendingFiltered
@@ -495,9 +495,9 @@ const Pages = (() => {
               <td data-label="Class">${UI.esc(s.className)}</td>
               <td data-label="Phone">${UI.esc(s.phone)}</td>
               <td data-label="Pay by">${UI.esc(s.payByDate || "—")}</td>
-              <td data-label="Balance">${UI.money(s.balance)}</td>
+              <td data-label="Amount due">${UI.money(s.balance)}</td>
               <td class="row-actions">
-                <button class="btn btn-sm" data-fee="${s.id}">Collect</button>
+                <button class="btn btn-sm" data-fee="${s.id}">Take fee</button>
                 <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(
                   s.phone,
                   UI.fillTemplate(feeTpl(), {
@@ -511,7 +511,7 @@ const Pages = (() => {
               </td></tr>`
                   )
                   .join("")
-              : `<tr><td colspan="6" class="empty">No pending fees</td></tr>`
+              : `<tr><td colspan="6" class="empty">No fees due right now</td></tr>`
           }</tbody></table></div>`;
 
       if (remindIdx >= remindersFiltered.length) remindIdx = Math.max(0, remindersFiltered.length - 1);
@@ -521,7 +521,7 @@ const Pages = (() => {
           ${
             cur
               ? `<h3>${UI.esc(cur.name)} · ${UI.esc(cur.className)}</h3>
-            <p>Balance ${UI.money(cur.balance)}</p>
+            <p>Amount due ${UI.money(cur.balance)}</p>
             <p>${(cur.reasons || []).map((r) => `<span class="badge badge-warn">${UI.esc(r)}</span> `).join("")}</p>
             <div class="toolbar">
               <a class="btn" id="wa-remind" target="_blank" rel="noopener" href="${UI.waLink(
@@ -533,28 +533,28 @@ const Pages = (() => {
                   balance: cur.balance,
                   schoolName: AppCache.school().name
                 })
-              )}">WhatsApp parent</a>
+              )}">Message parent</a>
               <button class="btn btn-ghost" id="next-remind">Next parent →</button>
             </div>
             <p style="color:var(--muted)">${remindIdx + 1} of ${remindersFiltered.length}</p>`
-              : `<p class="empty">Reminder queue empty</p>`
+              : `<p class="empty">No parents to remind</p>`
           }
         </div>
-        <div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Name</th><th>Balance</th><th>Why</th></tr></thead>
+        <div class="card table-wrap"><table class="data"><thead><tr><th>#</th><th>Name</th><th>Amount due</th><th>Reason</th></tr></thead>
         <tbody>${remindersFiltered
           .map(
             (x, i) =>
               `<tr ${i === remindIdx ? 'style="background:var(--primary-soft)"' : ""}>
                 <td data-label="#">${i + 1}</td>
                 <td data-label="Name">${UI.esc(x.name)}</td>
-                <td data-label="Balance">${UI.money(x.balance)}</td>
-                <td data-label="Why">${UI.esc((x.reasons || []).join("; "))}</td></tr>`
+                <td data-label="Amount due">${UI.money(x.balance)}</td>
+                <td data-label="Reason">${UI.esc((x.reasons || []).join("; "))}</td></tr>`
           )
           .join("") || `<tr><td colspan="4" class="empty">None</td></tr>`}</tbody></table></div>`;
 
       const receiptsHtml = `
         <div class="card table-wrap"><table class="data">
-          <thead><tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Mode</th><th>Date</th><th></th></tr></thead>
+          <thead><tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Paid by</th><th>Date</th><th></th></tr></thead>
           <tbody>${
             receipts.length
               ? receipts
@@ -567,7 +567,7 @@ const Pages = (() => {
                         : ""
                     }</td>
                 <td data-label="Amount">${UI.money(p.amount)}</td>
-                <td data-label="Mode">${UI.esc(p.mode)}${
+                <td data-label="Paid by">${UI.esc(p.mode)}${
                       p.chequeStatus ? `<div class="cell-sub">${UI.esc(p.chequeStatus)}</div>` : ""
                     }</td>
                 <td data-label="Date">${UI.esc(String(p.createdAt || "").slice(0, 10))}</td>
@@ -587,7 +587,7 @@ const Pages = (() => {
                 </td></tr>`
                   )
                   .join("")
-              : `<tr><td colspan="6" class="empty">No matching receipts</td></tr>`
+              : `<tr><td colspan="6" class="empty">No receipts found</td></tr>`
           }</tbody></table></div>`;
 
       const panel =
@@ -600,15 +600,15 @@ const Pages = (() => {
               : collectHtml;
 
       root.innerHTML = `
-        <div class="page-header"><div><h2>Fees</h2><p>Collect, pending, reminders & receipts</p></div></div>
+        <div class="page-header"><div><h2>Fees</h2><p>Take fees, see dues, remind parents, and open receipts</p></div></div>
         <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}">Collect (${pendingFiltered.length})</button>
-          <button type="button" role="tab" data-tab="pending" class="${tab === "pending" ? "active" : ""}">Pending (${pendingFiltered.length})</button>
-          <button type="button" role="tab" data-tab="reminders" class="${tab === "reminders" ? "active" : ""}">Reminders (${remindersFiltered.length})</button>
+          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}">Take fee (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="pending" class="${tab === "pending" ? "active" : ""}">Fees due (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="reminders" class="${tab === "reminders" ? "active" : ""}">Remind parents (${remindersFiltered.length})</button>
           <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}">Receipts (${receipts.length})</button>
         </div>
         <div class="toolbar">
-          <input name="q" type="search" placeholder="Search student name / admission / receipt" value="${UI.esc(q)}" autocomplete="off" />
+          <input name="q" type="search" placeholder="Search by student, admission no. or receipt" value="${UI.esc(q)}" autocomplete="off" />
         </div>
         <div id="fees-panel">${panel}</div>`;
 
@@ -674,7 +674,7 @@ const Pages = (() => {
       });
       root.querySelectorAll("[data-cancel]").forEach((b) => {
         b.onclick = async () => {
-          const reason = prompt("Cancel reason?");
+          const reason = prompt("Why cancel this receipt?");
           if (!reason) return;
           await Api.call("fees.cancel", { id: b.dataset.cancel, reason });
           reload();
@@ -682,10 +682,10 @@ const Pages = (() => {
       });
       root.querySelectorAll("[data-cheque]").forEach((b) => {
         b.onclick = async () => {
-          const status = prompt("Status: Pending / Cleared / Bounced", "Cleared");
+          const status = prompt("Cheque status: Pending / Cleared / Bounced", "Cleared");
           if (!status) return;
           await Api.call("cheque.updateStatus", { id: b.dataset.cheque, chequeStatus: status });
-          UI.toast("Cheque updated", "ok");
+          UI.toast("Cheque status saved", "ok");
           reload();
         };
       });
@@ -742,15 +742,15 @@ const Pages = (() => {
       } catch (e) {}
 
       root.innerHTML = `
-        <div class="page-header"><div><h2>Attendance</h2><p>Default present — mark absentees</p></div></div>
+        <div class="page-header"><div><h2>Attendance</h2><p>Everyone starts as present — mark who is absent</p></div></div>
         <div class="toolbar">
           <select id="cls" ${user.role === "Teacher" ? "disabled" : ""}>${UI.classOptions(className)}</select>
           <input type="date" id="dt" value="${date}">
-          <button class="btn" id="save">Save class</button>
-          <button class="btn btn-ghost" id="msg-abs">Message absentees</button>
+          <button class="btn" id="save">Save attendance</button>
+          <button class="btn btn-ghost" id="msg-abs">Message absent parents</button>
         </div>
         <div class="card">
-          <div class="form-row"><label>Substitute / note</label><input id="notes" value="${UI.esc((data.record && data.record.notes) || "")}" placeholder="Teacher leave / substitute"></div>
+          <div class="form-row"><label>Note (optional)</label><input id="notes" value="${UI.esc((data.record && data.record.notes) || "")}" placeholder="e.g. substitute teacher today"></div>
           <div class="check-list" id="list">
             ${
               students.length
@@ -767,7 +767,7 @@ const Pages = (() => {
                 </div>`;
                     })
                     .join("")
-                : `<p class="empty">No students in class ${UI.esc(className)}. Check Students or pick another class.</p>`
+                : `<p class="empty">No students in class ${UI.esc(className)}. Check the Students list or pick another class.</p>`
             }
           </div>
         </div>`;
@@ -863,25 +863,25 @@ const Pages = (() => {
       });
 
     root.innerHTML = `
-      <div class="page-header"><div><h2>WhatsApp</h2><p>Click-to-send with templates</p></div></div>
+      <div class="page-header"><div><h2>WhatsApp</h2><p>Pick a message and send to parents</p></div></div>
       <div class="card">
-        <div class="form-row"><label>Template</label>
+        <div class="form-row"><label>Message type</label>
           <select id="tpl">${tplKeys
             .map((k) => `<option value="${k}">${UI.esc(k)}</option>`)
             .join("")}</select></div>
-        <div class="form-row"><label>Suggested message</label>
+        <div class="form-row"><label>Message preview</label>
           <div class="tpl-preview" id="tpl-preview"></div></div>
-        <div class="form-row"><label>Custom message body</label>
-          <textarea id="customMsg" placeholder="Used for event / complaint / custom templates"></textarea></div>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Student</th><th>Balance</th><th></th></tr></thead>
+        <div class="form-row"><label>Your own words (optional)</label>
+          <textarea id="customMsg" placeholder="Add extra text for events or special notes"></textarea></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Student</th><th>Amount due</th><th></th></tr></thead>
         <tbody>${(pending || [])
           .map(
             (s) => `<tr>
             <td data-label="Student">${UI.esc(s.name)} (${UI.esc(s.className)})</td>
-            <td data-label="Balance">${UI.money(s.balance)}</td>
+            <td data-label="Amount due">${UI.money(s.balance)}</td>
             <td class="row-actions"><button class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(s.phone)}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(s.parentName)}" data-class="${UI.esc(s.className)}" data-bal="${s.balance}">Send</button></td></tr>`
           )
-          .join("") || `<tr><td colspan="3" class="empty">No students with pending fees</td></tr>`}</tbody></table></div>
+          .join("") || `<tr><td colspan="3" class="empty">No students with fees due</td></tr>`}</tbody></table></div>
       </div>`;
 
     const syncPreview = () => {
@@ -906,7 +906,7 @@ const Pages = (() => {
         });
         window.open(UI.waLink(btn.dataset.phone, msg), "_blank");
         await Api.call("whatsapp.log", { type: key, studentId: btn.dataset.id, phone: btn.dataset.phone, message: msg });
-        UI.toast("Logged", "ok");
+        UI.toast("Message opened", "ok");
       };
     });
   }
@@ -914,8 +914,8 @@ const Pages = (() => {
   async function expensesPage(root) {
     const list = await Api.call("expenses.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Expenses</h2></div><button class="btn" id="add">+ Expense</button></div>
-      <div class="card table-wrap"><table class="data"><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Mode</th><th>Notes</th></tr></thead>
+      <div class="page-header"><div><h2>Spending</h2><p>School money spent</p></div><button class="btn" id="add">+ Add spending</button></div>
+      <div class="card table-wrap"><table class="data"><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Paid by</th><th>Note</th></tr></thead>
       <tbody>${list
         .slice()
         .reverse()
@@ -926,13 +926,13 @@ const Pages = (() => {
         .join("")}</tbody></table></div>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
-        title: "Add expense",
+        title: "Add spending",
         body: `<div class="form-grid">
           <div class="form-row"><label>Date</label><input name="date" type="date" value="${new Date().toISOString().slice(0, 10)}"></div>
-          <div class="form-row"><label>Category</label><select name="category"><option>Utilities</option><option>Maintenance</option><option>Supplies</option><option>Transport</option><option>Events</option><option>Other</option></select></div>
+          <div class="form-row"><label>Type</label><select name="category"><option>Utilities</option><option>Maintenance</option><option>Supplies</option><option>Transport</option><option>Events</option><option>Other</option></select></div>
           <div class="form-row"><label>Amount</label><input name="amount" type="number"></div>
-          <div class="form-row"><label>Mode</label><select name="mode"><option>Cash</option><option>UPI</option><option>Bank</option></select></div>
-          <div class="form-row" style="grid-column:1/-1"><label>Notes</label><input name="notes"></div></div>`,
+          <div class="form-row"><label>Paid by</label><select name="mode"><option>Cash</option><option>UPI</option><option>Bank</option></select></div>
+          <div class="form-row" style="grid-column:1/-1"><label>Note</label><input name="notes"></div></div>`,
         onSubmit: async (b) => {
           await Api.call("expenses.create", {
             date: UI.formVal(b, "date"),
@@ -951,23 +951,23 @@ const Pages = (() => {
   async function staffPage(root) {
     const list = await Api.call("staff.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Staff & salary</h2></div><button class="btn" id="add">+ Staff</button></div>
+      <div class="page-header"><div><h2>Staff</h2><p>Teachers and office staff</p></div><button class="btn" id="add">+ Add staff</button></div>
       <div class="card table-wrap"><table class="data"><thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Salary</th><th></th></tr></thead>
       <tbody>${list
         .map(
           (s) =>
             `<tr><td>${UI.esc(s.name)}</td><td>${UI.esc(s.role)}</td><td>${UI.esc(s.phone)}</td><td>${UI.money(s.salary)}</td>
-            <td><button class="btn btn-sm" data-pay="${s.id}">Pay salary</button></td></tr>`
+            <td><button class="btn btn-sm" data-pay="${s.id}">Record salary</button></td></tr>`
         )
         .join("")}</tbody></table></div>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
-        title: "Add staff",
+        title: "Add staff member",
         body: `<div class="form-grid">
           <div class="form-row"><label>Name</label><input name="name"></div>
           <div class="form-row"><label>Role</label><input name="role" value="Teacher"></div>
           <div class="form-row"><label>Phone</label><input name="phone"></div>
-          <div class="form-row"><label>Salary</label><input name="salary" type="number"></div></div>`,
+          <div class="form-row"><label>Monthly salary</label><input name="salary" type="number"></div></div>`,
         onSubmit: async (b) => {
           await Api.call("staff.save", {
             name: UI.formVal(b, "name"),
@@ -983,7 +983,7 @@ const Pages = (() => {
     root.querySelectorAll("[data-pay]").forEach((btn) => {
       btn.onclick = async () => {
         await Api.call("salary.pay", { staffId: btn.dataset.pay });
-        UI.toast("Salary recorded as expense", "ok");
+        UI.toast("Salary saved under spending", "ok");
       };
     });
   }
@@ -991,25 +991,25 @@ const Pages = (() => {
   async function stockPage(root) {
     const list = await Api.call("stock.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Stock</h2></div><button class="btn" id="add">+ Item</button></div>
-      <div class="card table-wrap"><table class="data"><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th></th></tr></thead>
+      <div class="page-header"><div><h2>School store</h2><p>Books, uniforms and supplies</p></div><button class="btn" id="add">+ Add item</button></div>
+      <div class="card table-wrap"><table class="data"><thead><tr><th>Item</th><th>Type</th><th>Qty</th><th></th></tr></thead>
       <tbody>${list
         .map(
           (i) =>
             `<tr><td>${UI.esc(i.name)}</td><td>${UI.esc(i.category)}</td>
             <td>${i.qty <= i.reorderLevel ? `<span class="badge badge-warn">${i.qty}</span>` : i.qty}</td>
-            <td><button class="btn btn-sm btn-ghost" data-in="${i.id}">+ Purchase</button>
-                <button class="btn btn-sm btn-ghost" data-out="${i.id}">Issue</button></td></tr>`
+            <td><button class="btn btn-sm btn-ghost" data-in="${i.id}">+ Bought</button>
+                <button class="btn btn-sm btn-ghost" data-out="${i.id}">Given out</button></td></tr>`
         )
         .join("")}</tbody></table></div>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
-        title: "Stock item",
+        title: "Add store item",
         body: `<div class="form-grid">
-          <div class="form-row"><label>Name</label><input name="name"></div>
-          <div class="form-row"><label>Category</label><select name="category"><option>Books</option><option>Uniform</option></select></div>
-          <div class="form-row"><label>Opening qty</label><input name="openingQty" type="number" value="0"></div>
-          <div class="form-row"><label>Reorder level</label><input name="reorderLevel" type="number" value="5"></div></div>`,
+          <div class="form-row"><label>Item name</label><input name="name"></div>
+          <div class="form-row"><label>Type</label><select name="category"><option>Books</option><option>Uniform</option></select></div>
+          <div class="form-row"><label>Starting quantity</label><input name="openingQty" type="number" value="0"></div>
+          <div class="form-row"><label>Warn when below</label><input name="reorderLevel" type="number" value="5"></div></div>`,
         onSubmit: async (b) => {
           await Api.call("stock.save", {
             name: UI.formVal(b, "name"),
@@ -1035,13 +1035,13 @@ const Pages = (() => {
   async function transportPage(root) {
     const list = await Api.call("routes.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Transport routes</h2></div><button class="btn" id="add">+ Route</button></div>
+      <div class="page-header"><div><h2>Bus routes</h2><p>Transport fee by route</p></div><button class="btn" id="add">+ Add route</button></div>
       <div class="card table-wrap"><table class="data"><thead><tr><th>Route</th><th>Fee</th></tr></thead>
       <tbody>${list.map((r) => `<tr><td>${UI.esc(r.name)}</td><td>${UI.money(r.fee)}</td></tr>`).join("")}</tbody></table></div>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
-        title: "Route",
-        body: `<div class="form-row"><label>Name</label><input name="name"></div><div class="form-row"><label>Fee</label><input name="fee" type="number"></div>`,
+        title: "Add bus route",
+        body: `<div class="form-row"><label>Route name</label><input name="name"></div><div class="form-row"><label>Fee</label><input name="fee" type="number"></div>`,
         onSubmit: async (b) => {
           await Api.call("routes.save", { name: UI.formVal(b, "name"), fee: Number(UI.formVal(b, "fee")) });
           transportPage(root);
@@ -1100,7 +1100,7 @@ const Pages = (() => {
       if (!subjects.includes(subject)) subject = subjects[0];
 
       root.innerHTML = `
-        <div class="page-header"><div><h2>Exams & marks</h2></div></div>
+        <div class="page-header"><div><h2>Marks</h2><p>Enter exam marks for the class</p></div></div>
         <div class="toolbar">
           <select id="cls">${UI.classOptions(className)}</select>
           <select id="subj">${subjects
@@ -1114,7 +1114,7 @@ const Pages = (() => {
                       `<option value="${e.id}" ${e.id === examId ? "selected" : ""}>${UI.esc(e.name)}</option>`
                   )
                   .join("")
-              : `<option value="">No exams configured</option>`
+              : `<option value="">No exams added yet</option>`
           }</select>
           <button class="btn" id="save" ${!exam ? "disabled" : ""}>Save marks</button>
         </div>
@@ -1133,7 +1133,7 @@ const Pages = (() => {
                 .join("")
             : `<tr><td colspan="2" class="empty">No students in class ${UI.esc(className)}</td></tr>`
         }</tbody></table></div>
-        ${!exams.length ? `<p class="empty">Add exams under setup / Exams sheet, then reload.</p>` : ""}`;
+        ${!exams.length ? `<p class="empty">Ask the office to add exams in Settings, then refresh.</p>` : ""}`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
         subject = subjectsFor(className)[0];
@@ -1196,9 +1196,9 @@ const Pages = (() => {
         }));
       }
       root.innerHTML = `
-        <div class="page-header"><div><h2>Report cards</h2></div>
+        <div class="page-header"><div><h2>Report cards</h2><p>Print mark sheets for the class</p></div>
           <div class="toolbar"><select id="cls">${UI.classOptions(className)}</select>
-          <button class="btn" id="print">Print class</button></div></div>
+          <button class="btn" id="print">Print all</button></div></div>
         <div id="cards">${
           (data.cards || []).length
             ? data.cards.map((c) => reportCardHtml(c, data)).join("")
@@ -1251,13 +1251,13 @@ const Pages = (() => {
     const render = async () => {
       const rows = await Api.call("timetable.get", { className });
       root.innerHTML = `
-        <div class="page-header"><div><h2>Timetable</h2></div>
+        <div class="page-header"><div><h2>Timetable</h2><p>Class periods for the week</p></div>
           <div class="toolbar"><select id="cls">${UI.classOptions(className)}</select>
-          ${Auth.isPrincipal() ? `<button class="btn" id="add">Add slot</button>` : ""}</div></div>
+          ${Auth.isPrincipal() ? `<button class="btn" id="add">Add period</button>` : ""}</div></div>
         <div class="card table-wrap"><table class="data"><thead><tr><th>Day</th><th>Period</th><th>Subject</th></tr></thead>
         <tbody>${rows
           .map((r) => `<tr><td>${UI.esc(r.day)}</td><td>${UI.esc(r.period)}</td><td>${UI.esc(r.subject)}</td></tr>`)
-          .join("") || `<tr><td colspan="3" class="empty">No slots</td></tr>`}</tbody></table></div>`;
+          .join("") || `<tr><td colspan="3" class="empty">No periods yet</td></tr>`}</tbody></table></div>`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
         render();
@@ -1266,10 +1266,10 @@ const Pages = (() => {
       if (add)
         add.onclick = async () => {
           await UI.modal({
-            title: "Timetable slot",
+            title: "Add period",
             body: `<div class="form-grid">
               <div class="form-row"><label>Day</label><select name="day">${days.map((d) => `<option>${d}</option>`).join("")}</select></div>
-              <div class="form-row"><label>Period</label><input name="period" value="1"></div>
+              <div class="form-row"><label>Period number</label><input name="period" value="1"></div>
               <div class="form-row"><label>Subject</label><input name="subject"></div></div>`,
             onSubmit: async (b) => {
               await Api.call("timetable.save", {
@@ -1290,22 +1290,22 @@ const Pages = (() => {
   async function noticesPage(root) {
     const list = await Api.call("notices.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Notices</h2></div>
-        ${Auth.isPrincipal() || AppCache.user().role === "Teacher" ? `<button class="btn" id="add">+ Notice</button>` : ""}</div>
+      <div class="page-header"><div><h2>Notices</h2><p>School announcements</p></div>
+        ${Auth.isPrincipal() || AppCache.user().role === "Teacher" ? `<button class="btn" id="add">+ New notice</button>` : ""}</div>
       ${(list || [])
         .map(
           (n) =>
             `<div class="card"><h3>${UI.esc(n.title)}</h3><p style="color:var(--muted);font-size:0.85rem">${UI.esc(n.date)} · ${UI.esc(n.className)}</p><p>${UI.esc(n.body)}</p></div>`
         )
-        .join("") || `<div class="card empty">No notices</div>`}`;
+        .join("") || `<div class="card empty">No notices yet</div>`}`;
     const add = root.querySelector("#add");
     if (add)
       add.onclick = async () => {
         await UI.modal({
-          title: "Notice",
+          title: "New notice",
           body: `<div class="form-row"><label>Title</label><input name="title"></div>
-            <div class="form-row"><label>Class</label><select name="className"><option>All</option>${UI.classOptions()}</select></div>
-            <div class="form-row"><label>Body</label><textarea name="body"></textarea></div>`,
+            <div class="form-row"><label>For class</label><select name="className"><option>All</option>${UI.classOptions()}</select></div>
+            <div class="form-row"><label>Message</label><textarea name="body"></textarea></div>`,
           onSubmit: async (b) => {
             await Api.call("notices.create", {
               title: UI.formVal(b, "title"),
@@ -1376,15 +1376,15 @@ const Pages = (() => {
   async function certificatesPage(root) {
     const students = await Api.call("students.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Certificates</h2><p>Bonafide, TC, ID — numbered series</p></div></div>
+      <div class="page-header"><div><h2>Certificates</h2><p>Bonafide, transfer certificate, or student ID</p></div></div>
       <div class="card">
         <div class="form-grid">
           <div class="form-row"><label>Student</label><select id="stu">${(students || [])
             .map((s) => `<option value="${s.id}">${UI.esc(s.name)} (${UI.esc(s.className)})</option>`)
             .join("")}</select></div>
-          <div class="form-row"><label>Type</label><select id="type"><option>Bonafide</option><option>TC</option><option>ID</option></select></div>
+          <div class="form-row"><label>Certificate type</label><select id="type"><option value="Bonafide">Bonafide</option><option value="TC">Transfer (TC)</option><option value="ID">Student ID</option></select></div>
         </div>
-        <button class="btn" id="issue">Issue & print</button>
+        <button class="btn" id="issue">Make & print</button>
       </div>`;
     root.querySelector("#issue").onclick = async () => {
       const type = root.querySelector("#type").value;
@@ -1424,29 +1424,29 @@ const Pages = (() => {
       proj = triple[2];
     }
     root.innerHTML = `
-      <div class="page-header"><div><h2>Finance</h2><p>Reports, YoY, projections</p></div>
-        <button class="btn btn-ghost" id="export">Export summary CSV</button></div>
+      <div class="page-header"><div><h2>Accounts</h2><p>Money in, money out, and year outlook</p></div>
+        <button class="btn btn-ghost" id="export">Download summary</button></div>
       <div class="grid grid-4">
-        <div class="stat"><div class="label">Income</div><div class="value ok">${UI.money(reports.income)}</div></div>
-        <div class="stat"><div class="label">Expenses</div><div class="value">${UI.money(reports.expenses)}</div></div>
-        <div class="stat"><div class="label">Surplus</div><div class="value">${UI.money(reports.surplus)}</div></div>
-        <div class="stat"><div class="label">Collection efficiency</div><div class="value">${reports.receivables.efficiency}%</div></div>
+        <div class="stat"><div class="label">Money in</div><div class="value ok">${UI.money(reports.income)}</div></div>
+        <div class="stat"><div class="label">Money out</div><div class="value">${UI.money(reports.expenses)}</div></div>
+        <div class="stat"><div class="label">Left over</div><div class="value">${UI.money(reports.surplus)}</div></div>
+        <div class="stat"><div class="label">Fees collected %</div><div class="value">${reports.receivables.efficiency}%</div></div>
       </div>
       <div class="grid grid-2" style="margin-top:1rem">
-        <div class="card"><h3>Year vs previous average</h3>
-          <p>Collection vs avg: <strong>${UI.money(yoy.aheadBehind.collection)}</strong></p>
-          <p>Expenses vs avg: <strong>${UI.money(yoy.aheadBehind.expenses)}</strong></p>
-          <p style="color:var(--muted);font-size:0.85rem">Avg previous collection ${UI.money(yoy.averagePrevious.feeCollected)}</p>
+        <div class="card"><h3>Compared with past years</h3>
+          <p>Fees vs average: <strong>${UI.money(yoy.aheadBehind.collection)}</strong></p>
+          <p>Spending vs average: <strong>${UI.money(yoy.aheadBehind.expenses)}</strong></p>
+          <p style="color:var(--muted);font-size:0.85rem">Past average fees collected ${UI.money(yoy.averagePrevious.feeCollected)}</p>
         </div>
-        <div class="card"><h3>Projections</h3>
-          <p>Expected year-end collection: <strong>${UI.money(proj.expectedYearEndCollection)}</strong></p>
-          <p>Expected pending: ${UI.money(proj.expectedPending)}</p>
-          <p>Expense forecast: ${UI.money(proj.expenseForecast)}</p>
-          <p>Projected surplus: <strong>${UI.money(proj.projectedSurplus)}</strong></p>
+        <div class="card"><h3>Year-end outlook</h3>
+          <p>Expected fees by year end: <strong>${UI.money(proj.expectedYearEndCollection)}</strong></p>
+          <p>Expected still due: ${UI.money(proj.expectedPending)}</p>
+          <p>Expected spending: ${UI.money(proj.expenseForecast)}</p>
+          <p>Expected left over: <strong>${UI.money(proj.projectedSurplus)}</strong></p>
           <p style="color:var(--muted);font-size:0.8rem">${UI.esc(proj.note)}</p>
         </div>
       </div>
-      <div class="card"><h3>Income by mode</h3>
+      <div class="card"><h3>Fees by payment type</h3>
         <div class="table-wrap"><table class="data"><tbody>
           ${Object.keys(reports.byMode)
             .map((k) => `<tr><td>${UI.esc(k)}</td><td>${UI.money(reports.byMode[k])}</td></tr>`)
@@ -1466,19 +1466,19 @@ const Pages = (() => {
 
   async function importPage(root) {
     root.innerHTML = `
-      <div class="page-header"><div><h2>Import</h2><p>CSV students & year summaries</p></div></div>
+      <div class="page-header"><div><h2>Upload list</h2><p>Paste a spreadsheet list to add many rows at once</p></div></div>
       <div class="grid grid-2">
         <div class="card">
-          <h3>Students CSV</h3>
-          <p style="font-size:0.85rem;color:var(--muted)">Headers: name,parentName,phone,className,annualFee,previousBalance</p>
+          <h3>Student list</h3>
+          <p style="font-size:0.85rem;color:var(--muted)">First line must be: name,parentName,phone,className,annualFee,previousBalance</p>
           <textarea id="stuCsv" rows="8" placeholder="name,parentName,phone,className,annualFee,previousBalance&#10;Riya,Suresh,9876501234,3,22000,0"></textarea>
-          <button class="btn" id="impStu" style="margin-top:0.75rem">Import students</button>
+          <button class="btn" id="impStu" style="margin-top:0.75rem">Upload students</button>
         </div>
         <div class="card">
-          <h3>Year summary CSV</h3>
-          <p style="font-size:0.85rem;color:var(--muted)">Headers: academicYear,month,feeCollected,expenses,enrollment,pendingBalance</p>
+          <h3>Past year totals</h3>
+          <p style="font-size:0.85rem;color:var(--muted)">First line must be: academicYear,month,feeCollected,expenses,enrollment,pendingBalance</p>
           <textarea id="yrCsv" rows="8" placeholder="academicYear,month,feeCollected,expenses,enrollment,pendingBalance&#10;2023-24,YEAR,4000000,3000000,220,250000"></textarea>
-          <button class="btn" id="impYr" style="margin-top:0.75rem">Import year data</button>
+          <button class="btn" id="impYr" style="margin-top:0.75rem">Upload year totals</button>
         </div>
       </div>`;
     const parse = (text) => {
@@ -1495,12 +1495,12 @@ const Pages = (() => {
     root.querySelector("#impStu").onclick = async () => {
       const rows = parse(root.querySelector("#stuCsv").value);
       const res = await Api.call("import.students", { rows });
-      UI.toast("Imported " + res.imported + " students", "ok");
+      UI.toast("Added " + res.imported + " students", "ok");
     };
     root.querySelector("#impYr").onclick = async () => {
       const rows = parse(root.querySelector("#yrCsv").value);
       await Api.call("import.yearSummary", { rows });
-      UI.toast("Year summary imported", "ok");
+      UI.toast("Year totals saved", "ok");
     };
   }
 
@@ -1517,20 +1517,33 @@ const Pages = (() => {
       ...(settings.subjectsByClass || AppCache.subjectsByClass() || {})
     };
 
+    const moduleLabels = {
+      enquiries: "Admission calls",
+      whatsapp: "WhatsApp messages",
+      expenses: "Spending",
+      staff: "Staff",
+      stock: "School store",
+      transport: "Bus routes",
+      exams: "Marks",
+      timetable: "Timetable",
+      certificates: "Certificates",
+      finance: "Accounts"
+    };
+
     root.innerHTML = `
-      <div class="page-header"><div><h2>Settings</h2><p>Modules, fees, subjects & services</p></div>
-        <button class="btn btn-ghost" id="backup">Backup now</button></div>
-      <div class="card"><h3>Modules</h3>
+      <div class="page-header"><div><h2>Settings</h2><p>Turn features on/off and set fees</p></div>
+        <button class="btn btn-ghost" id="backup">Save backup</button></div>
+      <div class="card"><h3>Features</h3>
         ${Object.keys(modules)
           .map(
             (k) =>
-              `<label class="switch"><span>${k}</span><input type="checkbox" data-mod="${k}" ${modules[k] ? "checked" : ""}></label>`
+              `<label class="switch"><span>${UI.esc(moduleLabels[k] || k)}</span><input type="checkbox" data-mod="${k}" ${modules[k] ? "checked" : ""}></label>`
           )
           .join("")}
-        <button class="btn" id="saveMod" style="margin-top:1rem">Save modules</button>
+        <button class="btn" id="saveMod" style="margin-top:1rem">Save features</button>
       </div>
-      <div class="card"><h3>Class-wise annual fees</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Annual fee (₹)</th></tr></thead>
+      <div class="card"><h3>Yearly fee by class</h3>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Yearly fee (₹)</th></tr></thead>
         <tbody>${CONFIG.classes
           .map(
             (c) =>
@@ -1540,8 +1553,8 @@ const Pages = (() => {
           .join("")}</tbody></table></div>
         <button class="btn" id="saveFees" style="margin-top:0.75rem">Save class fees</button>
       </div>
-      <div class="card"><h3>Subjects by class</h3>
-        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Comma-separated subject names per class</p>
+      <div class="card"><h3>Subjects for each class</h3>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Write subject names separated by commas</p>
         <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Subjects</th></tr></thead>
         <tbody>${CONFIG.classes
           .map((c) => {
@@ -1552,17 +1565,17 @@ const Pages = (() => {
           .join("")}</tbody></table></div>
         <button class="btn" id="saveSubj" style="margin-top:0.75rem">Save subjects</button>
       </div>
-      <div class="card"><h3>Services catalog</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Cost</th><th>Type</th><th>Active</th></tr></thead>
+      <div class="card"><h3>Extra services</h3>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Cost</th><th>Type</th><th>On</th></tr></thead>
         <tbody>${(services || [])
           .map(
             (s) =>
               `<tr><td data-label="Name">${UI.esc(s.name)}</td><td data-label="Cost">${UI.money(s.cost)}</td>
               <td data-label="Type">${UI.esc(s.billingType)}</td>
-              <td data-label="Active">${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
+              <td data-label="On">${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
           )
           .join("")}</tbody></table></div>
-        <button class="btn" id="addSvc" style="margin-top:0.75rem">+ Service</button>
+        <button class="btn" id="addSvc" style="margin-top:0.75rem">+ Add service</button>
       </div>
       ${Api.useDemo() ? `<div class="card"><button class="btn btn-accent" id="resetDemo">Reset demo data</button></div>` : ""}`;
 
@@ -1577,7 +1590,7 @@ const Pages = (() => {
       root.querySelectorAll("[data-mod]").forEach((el) => (m[el.dataset.mod] = el.checked));
       await Api.call("modules.save", { modules: m });
       await refreshBoot();
-      UI.toast("Modules saved", "ok");
+      UI.toast("Features saved", "ok");
     };
     root.querySelector("#saveFees").onclick = async () => {
       const classFees = {};
@@ -1602,11 +1615,11 @@ const Pages = (() => {
     };
     root.querySelector("#addSvc").onclick = async () => {
       await UI.modal({
-        title: "Service",
+        title: "Add service",
         body: `<div class="form-grid">
           <div class="form-row"><label>Name</label><input name="name"></div>
           <div class="form-row"><label>Cost</label><input name="cost" type="number"></div>
-          <div class="form-row"><label>Billing</label><select name="billingType"><option>annual</option><option>one-time</option></select></div></div>`,
+          <div class="form-row"><label>Charge type</label><select name="billingType"><option value="annual">Every year</option><option value="one-time">One time</option></select></div></div>`,
         onSubmit: async (b) => {
           await Api.call("services.save", {
             name: UI.formVal(b, "name"),
@@ -1636,25 +1649,25 @@ const Pages = (() => {
   async function usersPage(root) {
     const list = await Api.call("users.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Users</h2></div><button class="btn" id="add">+ User</button></div>
-      <div class="card table-wrap"><table class="data"><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Class</th><th></th></tr></thead>
+      <div class="page-header"><div><h2>Logins</h2><p>Who can open this app</p></div><button class="btn" id="add">+ Add login</button></div>
+      <div class="card table-wrap"><table class="data"><thead><tr><th>User name</th><th>Full name</th><th>Role</th><th>Class</th><th></th></tr></thead>
       <tbody>${list
         .map(
           (u) =>
             `<tr><td>${UI.esc(u.username)}</td><td>${UI.esc(u.displayName)}</td><td>${UI.esc(u.role)}</td><td>${UI.esc(u.classAssigned)}</td>
-            <td><button class="btn btn-sm btn-ghost" data-reset="${u.id}">Reset password</button>
-            ${u.active === false ? "" : `<button class="btn btn-sm btn-ghost" data-dis="${u.id}">Disable</button>`}</td></tr>`
+            <td><button class="btn btn-sm btn-ghost" data-reset="${u.id}">New password</button>
+            ${u.active === false ? "" : `<button class="btn btn-sm btn-ghost" data-dis="${u.id}">Turn off</button>`}</td></tr>`
         )
         .join("")}</tbody></table></div>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
-        title: "Create user",
+        title: "Add login",
         body: `<div class="form-grid">
-          <div class="form-row"><label>Username</label><input name="username"></div>
+          <div class="form-row"><label>User name</label><input name="username"></div>
           <div class="form-row"><label>Password</label><input name="password" value="ChangeMe@123"></div>
-          <div class="form-row"><label>Display name</label><input name="displayName"></div>
+          <div class="form-row"><label>Full name</label><input name="displayName"></div>
           <div class="form-row"><label>Role</label><select name="role"><option>Teacher</option><option>Principal</option></select></div>
-          <div class="form-row"><label>Class assigned</label><input name="classAssigned" placeholder="1"></div></div>`,
+          <div class="form-row"><label>Class (for teachers)</label><input name="classAssigned" placeholder="1"></div></div>`,
         onSubmit: async (b) => {
           await Api.call("users.create", {
             username: UI.formVal(b, "username"),
@@ -1670,10 +1683,10 @@ const Pages = (() => {
     };
     root.querySelectorAll("[data-reset]").forEach((b) => {
       b.onclick = async () => {
-        const pw = prompt("New password", "ChangeMe@123");
+        const pw = prompt("Enter a new password", "ChangeMe@123");
         if (!pw) return;
         await Api.call("users.resetPassword", { id: b.dataset.reset, password: pw });
-        UI.toast("Password reset", "ok");
+        UI.toast("Password updated", "ok");
       };
     });
     root.querySelectorAll("[data-dis]").forEach((b) => {
@@ -1686,26 +1699,26 @@ const Pages = (() => {
 
   async function yearPage(root) {
     root.innerHTML = `
-      <div class="page-header"><div><h2>Promotion & year close</h2></div></div>
+      <div class="page-header"><div><h2>New school year</h2><p>Move students up and start the next year</p></div></div>
       <div class="grid grid-2">
         <div class="card">
-          <h3>Bulk promote</h3>
-          <p>Moves Active students to next class for the next academic year. Class 10 → Passed out.</p>
-          <button class="btn" id="promote">Run promotion</button>
+          <h3>Move students up</h3>
+          <p>All active students go to the next class. Class 10 becomes Passed out.</p>
+          <button class="btn" id="promote">Move students up</button>
         </div>
         <div class="card">
-          <h3>Close academic year</h3>
-          <p>Archives finance totals into YearSummary and opens the next year.</p>
-          <button class="btn btn-dark" id="close">Close year</button>
+          <h3>Finish this year</h3>
+          <p>Saves this year’s money totals and opens the next school year.</p>
+          <button class="btn btn-dark" id="close">Finish year</button>
         </div>
       </div>`;
     root.querySelector("#promote").onclick = async () => {
-      if (!confirm("Promote all active students?")) return;
+      if (!confirm("Move all active students to the next class?")) return;
       const r = await Api.call("promote.run", {});
-      UI.toast("Promoted → " + r.nextYear + " (" + r.results.length + ")", "ok");
+      UI.toast("Moved to " + r.nextYear + " (" + r.results.length + " students)", "ok");
     };
     root.querySelector("#close").onclick = async () => {
-      if (!confirm("Close current academic year?")) return;
+      if (!confirm("Finish the current school year and open the next one?")) return;
       const r = await Api.call("year.close", {});
       const boot = await Api.call("bootstrap", {});
       AppCache.set(boot);

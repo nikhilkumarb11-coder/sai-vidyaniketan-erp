@@ -23,7 +23,7 @@ const PWA = (() => {
   async function register() {
     if (!("serviceWorker" in navigator)) return;
     try {
-      const reg = await navigator.serviceWorker.register("sw.js?v=13", { scope: "./" });
+      const reg = await navigator.serviceWorker.register("sw.js?v=14", { scope: "./" });
       // Pick up new SW immediately so auth fixes are not stuck behind cache-first
       if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
       reg.update().catch(() => {});
