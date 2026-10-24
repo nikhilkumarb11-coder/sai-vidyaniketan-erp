@@ -327,7 +327,11 @@ const Pages = (() => {
           <p>Amount paid: <strong>${UI.money(r.amount)}</strong> · ${UI.esc(r.mode || "")}
             ${r.reference ? ` (${UI.esc(r.reference)})` : ""}</p>
           <p>Balance after payment: ${UI.money(r.balanceAfter)}</p>
-          ${r.cancelled ? `<p><span class="badge badge-danger">Cancelled</span> ${UI.esc(r.cancelReason || "")}</p>` : ""}
+          ${
+            r.cancelled === true || r.cancelled === "TRUE" || r.cancelled === "true"
+              ? `<p><span class="badge badge-danger">Cancelled</span> ${UI.esc(r.cancelReason || "")}</p>`
+              : ""
+          }
         </div>
         <p style="margin-top:1rem">
           <a class="btn btn-sm" href="${shareHref}" target="_blank" rel="noopener">Share WhatsApp</a>
@@ -401,6 +405,10 @@ const Pages = (() => {
 
     let tab = "collect";
     let q = "";
+    const isCancelled = (p) => {
+      const v = p && p.cancelled;
+      return v === true || v === "TRUE" || v === "true" || v === "Y" || v === 1 || v === "1";
+    };
 
     const matchesQ = (...parts) => {
       const qLower = q.trim().toLowerCase();
@@ -442,7 +450,7 @@ const Pages = (() => {
             receipts.length
               ? receipts
                   .map(
-                    (p) => `<tr class="${p.cancelled ? "row-muted" : ""}">
+                    (p) => `<tr class="${isCancelled(p) ? "row-muted" : ""}">
                 <td>${UI.esc(p.receiptNo)}</td>
                 <td>${UI.esc(p.student.name || "—")}${
                       p.student.className
@@ -458,12 +466,12 @@ const Pages = (() => {
                   <button type="button" class="btn btn-sm" data-view="${p.id}">View</button>
                   <button type="button" class="btn btn-sm btn-ghost" data-share="${p.id}">Share</button>
                   ${
-                    p.mode === "Cheque" && !p.cancelled
+                    p.mode === "Cheque" && !isCancelled(p)
                       ? `<button type="button" class="btn btn-sm btn-ghost" data-cheque="${p.id}">Cheque</button>`
                       : ""
                   }
                   ${
-                    !p.cancelled
+                    !isCancelled(p)
                       ? `<button type="button" class="btn btn-sm btn-ghost" data-cancel="${p.id}">Cancel</button>`
                       : `<span class="badge badge-danger">Cancelled</span>`
                   }
