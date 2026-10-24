@@ -807,6 +807,49 @@
     box-shadow: var(--shadow);
   }
 
+  .table-wrap table.data tbody tr.fee-class-head {
+    padding: 0.45rem 0.65rem;
+    margin-bottom: 0.35rem;
+    box-shadow: none;
+    background: var(--bg-elevated, #e2e8f0);
+  }
+
+  .table-wrap table.data tbody tr.fee-class-head td {
+    display: block;
+    text-align: left;
+    padding: 0;
+    font-size: 0.78rem;
+  }
+
+  .table-wrap table.data tbody tr.fee-class-head td::before {
+    content: none;
+    display: none;
+  }
+
+  .students-table table.data tbody tr {
+    padding: 0.45rem 0.6rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .toolbar-compact {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .toolbar-compact select,
+  .toolbar-compact input,
+  .toolbar-compact .btn {
+    width: auto;
+    flex: 1 1 calc(50% - 0.3rem);
+    max-width: none;
+  }
+
+  .workspace-bar ~ .content .sticky-tools,
+  .content .sticky-tools {
+    top: 0;
+  }
+
   .table-wrap table.data tbody tr:hover td {
     background: transparent;
   }
@@ -1070,6 +1113,169 @@ table.data tbody tr:last-child td {
 .switch input {
   width: 42px;
   height: 24px;
+}
+
+.page-header-inline {
+  align-items: center;
+}
+
+.toolbar-compact {
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.toolbar-compact select,
+.toolbar-compact input[type="date"],
+.toolbar-compact input[type="search"],
+.toolbar-compact input:not([type]) {
+  min-height: 40px;
+  flex: 1 1 120px;
+  max-width: none;
+}
+
+.sticky-tools {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding: 0.35rem 0;
+  margin-left: -0.15rem;
+  margin-right: -0.15rem;
+  padding-left: 0.15rem;
+  padding-right: 0.15rem;
+}
+
+.fee-class-head td {
+  background: var(--bg-elevated, #f1f5f9) !important;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--ink);
+  white-space: normal !important;
+}
+
+.att-card {
+  padding: 0.55rem 0.65rem;
+}
+
+.att-note {
+  width: 100%;
+  margin-bottom: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  min-height: 38px;
+}
+
+.att-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.att-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.15rem;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.att-row:last-child {
+  border-bottom: none;
+}
+
+.att-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.att-chips {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.att-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-weight: 750;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.att-chip.active.att-present {
+  background: #D1FAE5;
+  border-color: #059669;
+  color: #047857;
+}
+
+.att-chip.active.att-absent {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.att-chip.active.att-leave {
+  background: #FEF3C7;
+  border-color: #D97706;
+  color: #B45309;
+}
+
+.marks-card {
+  padding: 0.45rem 0.65rem;
+}
+
+.marks-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.marks-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.marks-row:last-child {
+  border-bottom: none;
+}
+
+.marks-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.marks-input {
+  width: 4.5rem;
+  flex-shrink: 0;
+  min-height: 40px;
+  text-align: center;
+  font-weight: 650;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
 }
 
 .fees-remind-strip {

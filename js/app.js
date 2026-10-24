@@ -94,6 +94,23 @@ const App = (() => {
     });
   }
 
+  /** Pull latest school data, drop stale page cache, re-draw the open screen */
+  async function refreshData(opts = {}) {
+    if (!Api.getToken()) return false;
+    try {
+      await Core.pull({ full: opts.full !== false });
+    } catch (e) {}
+    if (typeof Router !== "undefined") {
+      Router.invalidatePage();
+      if (opts.rerender !== false && AppCache.user()) {
+        try {
+          await Router.go();
+        } catch (e) {}
+      }
+    }
+    return true;
+  }
+
   async function boot() {
     applyTheme();
     document.getElementById("login-motto").textContent = CONFIG.school.motto;
@@ -112,12 +129,22 @@ const App = (() => {
     Api.warm();
     Router.start();
 
+    // After background sync, drop cached screen HTML so the next open is fresh
+    if (typeof Core !== "undefined" && Core.onSync) {
+      Core.onSync(() => {
+        if (typeof Router !== "undefined") Router.invalidatePage();
+      });
+    }
+
     if (stayIn) {
       if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
       try {
         await Router.go();
       } catch (e) {}
-      Auth.restore().catch(() => {});
+      // Local paint first, then full sync so one reload updates every screen
+      Auth.restore()
+        .then(() => refreshData({ full: true, rerender: true }))
+        .catch(() => {});
       return;
     }
 
@@ -126,12 +153,13 @@ const App = (() => {
       showShell();
       if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
       await Router.go();
+      refreshData({ full: true, rerender: true }).catch(() => {});
     } else {
       showLogin();
     }
   }
 
-  return { boot, showLogin, showShell, applyTheme };
+  return { boot, showLogin, showShell, applyTheme, refreshData };
 })();
 
 document.addEventListener("DOMContentLoaded", () => App.boot());

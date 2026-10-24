@@ -42,7 +42,7 @@ const Pages = (() => {
         <div class="quick-actions" aria-label="Quick actions">
           <a class="qa-item qa-dark" href="#/fees"><span class="qa-ico">₹</span><span>Take fee</span></a>
           <a class="qa-item" href="#/attendance"><span class="qa-ico">✓</span><span>Attendance</span></a>
-          <a class="qa-item" href="#/students"><span class="qa-ico">+</span><span>New student</span></a>
+          <a class="qa-item" href="#/students?new=1"><span class="qa-ico">+</span><span>New student</span></a>
           <a class="qa-item qa-accent" href="#/fees"><span class="qa-ico">!</span><span>Fees due${d.reminderCount ? ` (${d.reminderCount})` : ""}</span></a>
         </div>
         <div class="grid grid-4 stats-row">
@@ -123,22 +123,34 @@ const Pages = (() => {
     }
   }
 
+  function hashQuery() {
+    const h = location.hash || "";
+    const i = h.indexOf("?");
+    if (i < 0) return {};
+    try {
+      return Object.fromEntries(new URLSearchParams(h.slice(i + 1)));
+    } catch (e) {
+      return {};
+    }
+  }
+
   async function studentsPage(root) {
+    const openNew = hashQuery().new === "1";
     const render = async () => {
       const q = root.querySelector("[name=q]")?.value || "";
       const className = root.querySelector("[name=className]")?.value || "";
       const list = await Api.call("students.list", { q, className, includeAllStatuses: true });
       root.innerHTML = `
-        <div class="page-header">
+        <div class="page-header page-header-inline">
           <div><h2>Students</h2><p>Add students and see their details</p></div>
           <button class="btn" id="btn-add-student">+ Add student</button>
         </div>
-        <div class="toolbar">
+        <div class="toolbar toolbar-compact">
           <input name="q" placeholder="Search by name, admission no. or phone" value="${UI.esc(q)}" />
           <select name="className"><option value="">All classes</option>${UI.classOptions(className)}</select>
           <button class="btn btn-ghost" id="btn-search">Find</button>
         </div>
-        <div class="card table-wrap"><table class="data">
+        <div class="card table-wrap students-table"><table class="data">
           <thead><tr><th>Adm. no.</th><th>Name</th><th>Class</th><th>Parent</th><th>Phone</th><th>Status</th><th></th></tr></thead>
           <tbody>${list
             .map(
@@ -163,6 +175,12 @@ const Pages = (() => {
       });
     };
     await render();
+    if (openNew) {
+      if (location.hash.indexOf("?") >= 0) {
+        history.replaceState(null, "", location.pathname + location.search + "#/students");
+      }
+      openStudentForm(null, render);
+    }
   }
 
   async function openStudentForm(existing, onDone) {
@@ -449,6 +467,7 @@ const Pages = (() => {
 
     let tab = allowed.includes(state.tab) ? state.tab : legacyTab[state.tab] || "dues";
     let q = "";
+    let classFilter = "";
     let remindIdx = 0;
     const isCancelled = (p) => {
       const v = p && p.cancelled;
@@ -472,17 +491,30 @@ const Pages = (() => {
         schoolName: AppCache.school().name
       });
 
+    const classOrder = CONFIG.classes || [];
+    const classRank = (c) => {
+      const i = classOrder.indexOf(String(c));
+      return i >= 0 ? i : 999;
+    };
+
     const render = (opts = {}) => {
       if (opts.tab) tab = legacyTab[opts.tab] || opts.tab;
       if (opts.q != null) q = opts.q;
+      if (opts.classFilter != null) classFilter = opts.classFilter;
       const keepFocus = opts.keepFocus;
 
-      const pendingFiltered = (pending || []).filter((s) =>
-        matchesQ(s.name, s.admissionNo, s.className, s.phone)
-      );
-      const remindersFiltered = reminders.filter((s) =>
-        matchesQ(s.name, s.className, s.phone, ...(s.reasons || []))
-      );
+      const pendingFiltered = (pending || [])
+        .filter((s) => matchesQ(s.name, s.admissionNo, s.className, s.phone))
+        .filter((s) => !classFilter || UI.classMatch(s.className, classFilter))
+        .slice()
+        .sort((a, b) => {
+          const d = classRank(a.className) - classRank(b.className);
+          if (d) return d;
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        });
+      const remindersFiltered = reminders
+        .filter((s) => matchesQ(s.name, s.className, s.phone, ...(s.reasons || [])))
+        .filter((s) => !classFilter || UI.classMatch(s.className, classFilter));
       const receipts = allReceipts.filter((p) =>
         matchesQ(p.student.name, p.student.admissionNo, p.receiptNo, p.student.className)
       );
@@ -490,6 +522,39 @@ const Pages = (() => {
 
       if (remindIdx >= remindersFiltered.length) remindIdx = Math.max(0, remindersFiltered.length - 1);
       const cur = remindersFiltered[remindIdx];
+
+      const duesClasses = [...new Set(pendingFiltered.map((s) => s.className))];
+      let duesBody = "";
+      if (!pendingFiltered.length) {
+        duesBody = `<tr><td colspan="6" class="empty">No fees due right now</td></tr>`;
+      } else {
+        let lastClass = null;
+        pendingFiltered.forEach((s) => {
+          if (s.className !== lastClass) {
+            lastClass = s.className;
+            const count = pendingFiltered.filter((x) => x.className === lastClass).length;
+            const total = pendingFiltered
+              .filter((x) => x.className === lastClass)
+              .reduce((sum, x) => sum + (Number(x.balance) || 0), 0);
+            duesBody += `<tr class="fee-class-head"><td colspan="6" data-label="Class">Class ${UI.esc(
+              lastClass
+            )} · ${count} · ${UI.money(total)}</td></tr>`;
+          }
+          const reasons = reasonByStudent[s.id] || reasonByStudent[s.studentId] || [];
+          duesBody += `<tr>
+              <td data-label="Name">${UI.esc(s.name)}${
+            reasons.length ? `<div class="cell-sub">${UI.esc(reasons.join("; "))}</div>` : ""
+          }</td>
+              <td data-label="Class">${UI.esc(s.className)}</td>
+              <td data-label="Phone">${UI.esc(s.phone)}</td>
+              <td data-label="Pay by">${UI.esc(s.payByDate || "—")}</td>
+              <td data-label="Amount due">${UI.money(s.balance)}</td>
+              <td class="row-actions">
+                <button class="btn btn-sm" data-fee="${s.id}">Take fee</button>
+                <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(s.phone, waMsg(s))}">Message</a>
+              </td></tr>`;
+        });
+      }
 
       const duesHtml = `
         ${
@@ -508,34 +573,24 @@ const Pages = (() => {
           </div>`
             : ""
         }
-        <div class="toolbar" style="margin-top:0">
+        <div class="toolbar toolbar-compact" style="margin-top:0">
+          <select id="fee-class-filter" aria-label="Filter by class">
+            <option value="">All classes${duesClasses.length ? ` (${pendingFiltered.length})` : ""}</option>
+            ${classOrder
+              .map((c) => {
+                const n = (pending || []).filter((s) => UI.classMatch(s.className, c)).length;
+                if (!n && classFilter !== c) return "";
+                return `<option value="${UI.esc(c)}" ${classFilter === c ? "selected" : ""}>${UI.esc(c)}${
+                  n ? ` (${n})` : ""
+                }</option>`;
+              })
+              .join("")}
+          </select>
           <button type="button" class="btn btn-ghost" id="export-pending">Download list</button>
         </div>
         <div class="card table-wrap"><table class="data">
           <thead><tr><th>Name</th><th>Class</th><th>Phone</th><th>Pay by</th><th>Amount due</th><th></th></tr></thead>
-          <tbody>${
-            pendingFiltered.length
-              ? pendingFiltered
-                  .map((s) => {
-                    const reasons = reasonByStudent[s.id] || reasonByStudent[s.studentId] || [];
-                    return `<tr>
-              <td data-label="Name">${UI.esc(s.name)}${
-                      reasons.length
-                        ? `<div class="cell-sub">${UI.esc(reasons.join("; "))}</div>`
-                        : ""
-                    }</td>
-              <td data-label="Class">${UI.esc(s.className)}</td>
-              <td data-label="Phone">${UI.esc(s.phone)}</td>
-              <td data-label="Pay by">${UI.esc(s.payByDate || "—")}</td>
-              <td data-label="Amount due">${UI.money(s.balance)}</td>
-              <td class="row-actions">
-                <button class="btn btn-sm" data-fee="${s.id}">Take fee</button>
-                <a class="btn btn-sm btn-ghost" target="_blank" rel="noopener" href="${UI.waLink(s.phone, waMsg(s))}">Message</a>
-              </td></tr>`;
-                  })
-                  .join("")
-              : `<tr><td colspan="6" class="empty">No fees due right now</td></tr>`
-          }</tbody></table></div>`;
+          <tbody>${duesBody}</tbody></table></div>`;
 
       const receiptsHtml = `
         <div class="card table-wrap"><table class="data">
@@ -577,13 +632,14 @@ const Pages = (() => {
 
       const panel = tab === "receipts" ? receiptsHtml : duesHtml;
 
+      const dueCount = (pending || []).filter((s) => matchesQ(s.name, s.admissionNo, s.className, s.phone)).length;
       root.innerHTML = `
         <div class="page-header"><div><h2>Fees</h2><p>Take fees, message parents, or open receipts</p></div></div>
         <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="dues" class="${tab === "dues" ? "active" : ""}">Fees due (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="dues" class="${tab === "dues" ? "active" : ""}">Fees due (${dueCount})</button>
           <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}">Receipts (${receipts.length})</button>
         </div>
-        <div class="toolbar">
+        <div class="toolbar toolbar-compact">
           <input name="q" type="search" placeholder="Search by student, admission no. or receipt" value="${UI.esc(q)}" autocomplete="off" />
         </div>
         <div id="fees-panel">${panel}</div>`;
@@ -604,6 +660,10 @@ const Pages = (() => {
           searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
         } catch (_) {}
       }
+
+      root.querySelector("#fee-class-filter")?.addEventListener("change", (e) => {
+        render({ classFilter: e.target.value });
+      });
 
       const reload = () => feesPage(root, { tab });
       root.querySelectorAll("[data-fee]").forEach((b) => {
@@ -710,29 +770,35 @@ const Pages = (() => {
         }
       } catch (e) {}
 
+      const statusOf = (id) => (leave.has(id) ? "leave" : absent.has(id) ? "absent" : "present");
+      const chip = (val, cur) =>
+        `<button type="button" class="att-chip ${cur === val ? "active att-" + val : ""}" data-set="${val}">${
+          val === "present" ? "P" : val === "absent" ? "A" : "L"
+        }</button>`;
+
       root.innerHTML = `
-        <div class="page-header"><div><h2>Attendance</h2><p>Everyone starts as present — mark who is absent</p></div></div>
-        <div class="toolbar">
+        <div class="page-header page-header-compact">
+          <div><h2>Attendance</h2><p>Tap P / A / L — everyone starts as Present</p></div>
+        </div>
+        <div class="toolbar toolbar-compact sticky-tools">
           <select id="cls" ${user.role === "Teacher" ? "disabled" : ""}>${UI.classOptions(className)}</select>
           <input type="date" id="dt" value="${date}">
-          <button class="btn" id="save">Save attendance</button>
-          <button class="btn btn-ghost" id="msg-abs">Message absent parents</button>
+          <button class="btn" id="save">Save</button>
+          <button class="btn btn-ghost" id="msg-abs">Msg absent</button>
         </div>
-        <div class="card">
-          <div class="form-row"><label>Note (optional)</label><input id="notes" value="${UI.esc((data.record && data.record.notes) || "")}" placeholder="e.g. substitute teacher today"></div>
-          <div class="check-list" id="list">
+        <div class="card att-card">
+          <input id="notes" class="att-note" value="${UI.esc((data.record && data.record.notes) || "")}" placeholder="Note (optional)">
+          <div class="att-list" id="list">
             ${
               students.length
                 ? students
                     .map((s) => {
-                      const st = leave.has(s.id) ? "leave" : absent.has(s.id) ? "absent" : "present";
-                      return `<div class="check-item" data-id="${s.id}">
-                  <strong>${UI.esc(s.name)}</strong>
-                  <select data-status>
-                    <option value="present" ${st === "present" ? "selected" : ""}>Present</option>
-                    <option value="absent" ${st === "absent" ? "selected" : ""}>Absent</option>
-                    <option value="leave" ${st === "leave" ? "selected" : ""}>Leave</option>
-                  </select>
+                      const st = statusOf(s.id);
+                      return `<div class="att-row check-item" data-id="${s.id}" data-status="${st}">
+                  <span class="att-name">${UI.esc(s.name)}</span>
+                  <div class="att-chips" role="group" aria-label="Attendance for ${UI.esc(s.name)}">
+                    ${chip("present", st)}${chip("absent", st)}${chip("leave", st)}
+                  </div>
                 </div>`;
                     })
                     .join("")
@@ -741,11 +807,12 @@ const Pages = (() => {
           </div>
         </div>`;
 
+      const readStatus = (row) => row.dataset.status || "present";
       const persistDraft = () => {
         const absentIds = [],
           leaveIds = [];
-        root.querySelectorAll(".check-item").forEach((row) => {
-          const st = row.querySelector("[data-status]").value;
+        root.querySelectorAll(".att-row").forEach((row) => {
+          const st = readStatus(row);
           if (st === "absent") absentIds.push(row.dataset.id);
           if (st === "leave") leaveIds.push(row.dataset.id);
         });
@@ -754,7 +821,22 @@ const Pages = (() => {
           JSON.stringify({ absentIds, leaveIds })
         );
       };
-      root.querySelectorAll("[data-status]").forEach((el) => el.addEventListener("change", persistDraft));
+      const setRowStatus = (row, st) => {
+        row.dataset.status = st;
+        row.querySelectorAll(".att-chip").forEach((btn) => {
+          const v = btn.dataset.set;
+          btn.classList.toggle("active", v === st);
+          btn.classList.toggle("att-present", v === st && st === "present");
+          btn.classList.toggle("att-absent", v === st && st === "absent");
+          btn.classList.toggle("att-leave", v === st && st === "leave");
+        });
+        persistDraft();
+      };
+      root.querySelectorAll(".att-row").forEach((row) => {
+        row.querySelectorAll(".att-chip").forEach((btn) => {
+          btn.onclick = () => setRowStatus(row, btn.dataset.set);
+        });
+      });
 
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
@@ -767,8 +849,8 @@ const Pages = (() => {
       root.querySelector("#save").onclick = async () => {
         const absentIds = [],
           leaveIds = [];
-        root.querySelectorAll(".check-item").forEach((row) => {
-          const st = row.querySelector("[data-status]").value;
+        root.querySelectorAll(".att-row").forEach((row) => {
+          const st = readStatus(row);
           if (st === "absent") absentIds.push(row.dataset.id);
           if (st === "leave") leaveIds.push(row.dataset.id);
         });
@@ -780,13 +862,14 @@ const Pages = (() => {
           notes: root.querySelector("#notes").value
         });
         UI.toast("Attendance saved", "ok");
+        if (typeof Router !== "undefined") Router.invalidatePage();
         render();
       };
       root.querySelector("#msg-abs").onclick = () => {
         data.students
           .filter((s) => {
-            const row = root.querySelector(`.check-item[data-id="${s.id}"]`);
-            return row && row.querySelector("[data-status]").value === "absent";
+            const row = root.querySelector(`.att-row[data-id="${s.id}"]`);
+            return row && readStatus(row) === "absent";
           })
           .forEach((s) => {
             const msg = UI.fillTemplate(CONFIG.whatsappTemplates.absentee, {
@@ -1068,41 +1151,60 @@ const Pages = (() => {
       const subjects = subjectsFor(className);
       if (!subjects.includes(subject)) subject = subjects[0];
 
+      const maxM = exam ? Number(exam.maxMarks) || 0 : 0;
       root.innerHTML = `
-        <div class="page-header"><div><h2>Marks</h2><p>Enter exam marks for the class</p></div></div>
-        <div class="toolbar">
-          <select id="cls">${UI.classOptions(className)}</select>
-          <select id="subj">${subjects
+        <div class="page-header page-header-compact">
+          <div><h2>Marks</h2><p>Max ${maxM || "—"} for selected test</p></div>
+        </div>
+        <div class="toolbar toolbar-compact sticky-tools">
+          <select id="cls" aria-label="Class">${UI.classOptions(className)}</select>
+          <select id="subj" aria-label="Subject">${subjects
             .map((s) => `<option ${s === subject ? "selected" : ""}>${UI.esc(s)}</option>`)
             .join("")}</select>
-          <select id="ex">${
+          <select id="ex" aria-label="Test">${
             exams.length
               ? exams
                   .map(
                     (e) =>
-                      `<option value="${e.id}" ${e.id === examId ? "selected" : ""}>${UI.esc(e.name)}</option>`
+                      `<option value="${e.id}" ${e.id === examId ? "selected" : ""}>${UI.esc(e.name)} (${e.maxMarks})</option>`
                   )
                   .join("")
               : `<option value="">No exams added yet</option>`
           }</select>
-          <button class="btn" id="save" ${!exam ? "disabled" : ""}>Save marks</button>
+          <button class="btn" id="save" ${!exam ? "disabled" : ""}>Save</button>
         </div>
-        <div class="card table-wrap mobile-cards"><table class="data"><thead><tr><th>Student</th><th>Marks / ${
-          exam ? exam.maxMarks : "—"
-        }</th></tr></thead>
-        <tbody>${
-          students.length
-            ? students
-                .map(
-                  (s) =>
-                    `<tr><td data-label="Student">${UI.esc(s.name)}</td><td data-label="Marks"><input data-id="${s.id}" type="number" value="${
-                      markMap[s.id] != null ? markMap[s.id] : ""
-                    }" style="width:100px;min-height:40px;max-width:100%"></td></tr>`
-                )
-                .join("")
-            : `<tr><td colspan="2" class="empty">No students in class ${UI.esc(className)}</td></tr>`
-        }</tbody></table></div>
+        <div class="card marks-card">
+          <div class="marks-list">
+            ${
+              students.length
+                ? students
+                    .map(
+                      (s) => `<div class="marks-row">
+                <span class="marks-name">${UI.esc(s.name)}</span>
+                <input data-id="${s.id}" class="marks-input" type="number" min="0" max="${maxM || ""}" step="1"
+                  inputmode="numeric" placeholder="0–${maxM || "?"}"
+                  value="${markMap[s.id] != null ? markMap[s.id] : ""}">
+              </div>`
+                    )
+                    .join("")
+                : `<p class="empty">No students in class ${UI.esc(className)}</p>`
+            }
+          </div>
+        </div>
         ${!exams.length ? `<p class="empty">Ask the office to add exams in Settings, then refresh.</p>` : ""}`;
+
+      root.querySelectorAll(".marks-input").forEach((el) => {
+        el.addEventListener("input", () => {
+          if (el.value === "" || !maxM) return;
+          const n = Number(el.value);
+          if (n > maxM) {
+            el.value = String(maxM);
+            UI.toast("Max marks is " + maxM, "error");
+          }
+          if (n < 0) el.value = "0";
+        });
+      });
+
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
         subject = subjectsFor(className)[0];
@@ -1121,10 +1223,26 @@ const Pages = (() => {
           UI.toast("No exam selected", "error");
           return;
         }
-        const entries = [...root.querySelectorAll("input[data-id]")].map((el) => ({
-          studentId: el.dataset.id,
-          marks: el.value === "" ? "" : Number(el.value)
-        }));
+        const maxAllowed = Number(exam.maxMarks) || 0;
+        const entries = [];
+        for (const el of root.querySelectorAll("input[data-id]")) {
+          if (el.value === "") {
+            entries.push({ studentId: el.dataset.id, marks: "" });
+            continue;
+          }
+          const n = Number(el.value);
+          if (Number.isNaN(n) || n < 0) {
+            UI.toast("Enter valid marks for all students", "error");
+            el.focus();
+            return;
+          }
+          if (maxAllowed && n > maxAllowed) {
+            UI.toast("Cannot enter more than " + maxAllowed, "error");
+            el.focus();
+            return;
+          }
+          entries.push({ studentId: el.dataset.id, marks: n });
+        }
         await Api.call("marks.save", {
           className,
           subject,
@@ -1134,6 +1252,7 @@ const Pages = (() => {
           entries
         });
         UI.toast("Marks saved", "ok");
+        if (typeof Router !== "undefined") Router.invalidatePage();
       };
     };
     await render();

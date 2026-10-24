@@ -7,6 +7,7 @@ const Core = (() => {
   const IDB_KEY = "snapshot";
   const PULL_EVERY_MS = 60_000;
   const FULL_RELOAD_MS = 6 * 3600_000;
+  const syncListeners = new Set();
 
   const TABS = [
     "Students",
@@ -206,8 +207,34 @@ const Core = (() => {
     persist();
   }
 
+  function onSync(fn) {
+    if (typeof fn !== "function") return () => {};
+    syncListeners.add(fn);
+    return () => syncListeners.delete(fn);
+  }
+
+  function emitSync(info) {
+    syncListeners.forEach((fn) => {
+      try {
+        fn(info || {});
+      } catch (e) {}
+    });
+  }
+
+  function isPulling() {
+    return !!pulling;
+  }
+
   async function pull(opts = {}) {
-    if (!Api.getToken() || pulling) return;
+    if (!Api.getToken()) return false;
+    // Wait out an in-flight sync so a full reload is not skipped
+    if (pulling) {
+      let n = 0;
+      while (pulling && n++ < 40) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      if (pulling) return false;
+    }
     pulling = true;
     try {
       const forceFull = opts.full || !serverTime || Date.now() - loadedAt > FULL_RELOAD_MS;
@@ -216,14 +243,17 @@ const Core = (() => {
         { since: forceFull ? "" : serverTime },
         { skipCache: true, skipCore: true }
       );
-      if (!delta || !delta.tables) return;
+      if (!delta || !delta.tables) return false;
       mergeTables(delta.tables, !!delta.full || forceFull);
       serverTime = delta.serverTime || serverTime;
       if (forceFull || delta.full) loadedAt = Date.now();
       ready = true;
       await persist();
+      emitSync({ full: !!(forceFull || delta.full) });
+      return true;
     } catch (e) {
       // Stay on last good snapshot
+      return false;
     } finally {
       pulling = false;
     }
@@ -244,7 +274,15 @@ const Core = (() => {
   }
 
   function onVisible() {
-    if (document.visibilityState === "visible") pull().catch(() => {});
+    if (document.visibilityState === "visible") {
+      pull()
+        .then((changed) => {
+          if (changed && typeof Router !== "undefined" && Router.invalidatePage) {
+            Router.invalidatePage();
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   function canServe(action) {
@@ -376,6 +414,8 @@ const Core = (() => {
     restoreFromIdb,
     clear,
     pull,
+    isPulling,
+    onSync,
     startPullLoop,
     stopPullLoop,
     applyWrite,
