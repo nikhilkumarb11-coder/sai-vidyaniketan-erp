@@ -266,6 +266,28 @@ const Pages = (() => {
     });
   }
 
+  function receiptShareText(r) {
+    const school = r.school || AppCache.school();
+    const st = r.student || {};
+    return UI.fillTemplate(CONFIG.whatsappTemplates.feeReceipt, {
+      parentName: st.parentName || "Parent",
+      studentName: st.name || "",
+      class: st.className || "",
+      receiptNo: r.receiptNo || "",
+      amount: r.amount,
+      date: String(r.createdAt || "").slice(0, 10),
+      mode: r.mode || "",
+      balance: r.balanceAfter,
+      schoolName: school.name || CONFIG.school.name
+    });
+  }
+
+  function shareReceipt(r) {
+    const text = receiptShareText(r);
+    const phone = (r.student && r.student.phone) || "";
+    window.open(UI.waLink(phone, text), "_blank", "noopener");
+  }
+
   function printReceipt(r) {
     const school = r.school || AppCache.school();
     const st = r.student || {};
@@ -286,6 +308,35 @@ const Pages = (() => {
         <p style="margin-top:2rem">${UI.esc(CONFIG.receipt.signatureLabel)}</p>
         <div class="ribbon">${UI.esc(school.motto || CONFIG.school.motto)}</div>
       </div>`);
+  }
+
+  async function viewReceipt(r) {
+    const school = r.school || AppCache.school();
+    const st = r.student || {};
+    const shareHref = UI.waLink(st.phone || "", receiptShareText(r));
+    await UI.modal({
+      title: "Receipt " + (r.receiptNo || ""),
+      submitLabel: "Print",
+      body: `
+        <div class="receipt-preview">
+          <p class="muted">${UI.esc(school.name || "")}</p>
+          <p><strong>${UI.esc(r.receiptNo || "")}</strong> · ${UI.esc(String(r.createdAt || "").slice(0, 10))}</p>
+          <p>Student: <strong>${UI.esc(st.name || "—")}</strong>
+            ${st.admissionNo ? `(${UI.esc(st.admissionNo)})` : ""}
+            ${st.className ? ` · Class ${UI.esc(st.className)}` : ""}</p>
+          <p>Amount paid: <strong>${UI.money(r.amount)}</strong> · ${UI.esc(r.mode || "")}
+            ${r.reference ? ` (${UI.esc(r.reference)})` : ""}</p>
+          <p>Balance after payment: ${UI.money(r.balanceAfter)}</p>
+          ${r.cancelled ? `<p><span class="badge badge-danger">Cancelled</span> ${UI.esc(r.cancelReason || "")}</p>` : ""}
+        </div>
+        <p style="margin-top:1rem">
+          <a class="btn btn-sm" href="${shareHref}" target="_blank" rel="noopener">Share WhatsApp</a>
+        </p>`,
+      onSubmit: async () => {
+        printReceipt(r);
+        return true;
+      }
+    });
   }
 
   async function enquiriesPage(root) {
@@ -334,60 +385,164 @@ const Pages = (() => {
   }
 
   async function feesPage(root) {
-    const [pending, payments] = await Api.callAll([
+    const [pending, payments, students] = await Api.callAll([
       { action: "fees.pending" },
-      { action: "fees.list" }
+      { action: "fees.list" },
+      { action: "students.list", payload: { includeAllStatuses: true } }
     ]);
-    root.innerHTML = `
-      <div class="page-header"><div><h2>Fee collection</h2><p>Part-payments and receipts</p></div></div>
-      <div class="card"><h3>Quick collect</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Student</th><th>Class</th><th>Balance</th><th></th></tr></thead>
-        <tbody>${pending
-          .slice(0, 15)
-          .map(
-            (s) =>
-              `<tr><td>${UI.esc(s.name)}</td><td>${UI.esc(s.className)}</td><td>${UI.money(s.balance)}</td>
-              <td><button class="btn btn-sm" data-fee="${s.id}">Collect</button></td></tr>`
-          )
-          .join("")}</tbody></table></div></div>
-      <div class="card"><h3>Recent receipts</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Receipt</th><th>Amount</th><th>Mode</th><th>Cheque</th><th>Date</th><th></th></tr></thead>
-        <tbody>${payments
-          .slice()
-          .reverse()
-          .slice(0, 30)
-          .map(
-            (p) => `<tr class="${p.cancelled ? "badge-danger" : ""}">
-              <td>${UI.esc(p.receiptNo)}</td><td>${UI.money(p.amount)}</td><td>${UI.esc(p.mode)}</td>
-              <td>${UI.esc(p.chequeStatus || "—")}</td><td>${UI.esc(String(p.createdAt).slice(0, 10))}</td>
-              <td>${
-                p.mode === "Cheque" && !p.cancelled
-                  ? `<button class="btn btn-sm btn-ghost" data-cheque="${p.id}">Cheque status</button>`
-                  : ""
-              }
-              ${!p.cancelled ? `<button class="btn btn-sm btn-ghost" data-cancel="${p.id}">Cancel</button>` : "<span class='badge badge-danger'>Cancelled</span>"}</td></tr>`
-          )
-          .join("")}</tbody></table></div></div>`;
-    root.querySelectorAll("[data-fee]").forEach((b) => {
-      b.onclick = () => openCollectFee(b.dataset.fee, () => feesPage(root));
+    const byId = {};
+    (students || []).forEach((s) => {
+      byId[s.id] = s;
     });
-    root.querySelectorAll("[data-cancel]").forEach((b) => {
-      b.onclick = async () => {
-        const reason = prompt("Cancel reason?");
-        if (!reason) return;
-        await Api.call("fees.cancel", { id: b.dataset.cancel, reason });
-        feesPage(root);
+    const allReceipts = (payments || [])
+      .slice()
+      .reverse()
+      .map((p) => ({ ...p, student: byId[p.studentId] || {} }));
+
+    let tab = "collect";
+    let q = "";
+
+    const matchesQ = (...parts) => {
+      const qLower = q.trim().toLowerCase();
+      return !qLower || parts.some((x) => String(x || "").toLowerCase().includes(qLower));
+    };
+
+    const render = (opts = {}) => {
+      if (opts.tab) tab = opts.tab;
+      if (opts.q != null) q = opts.q;
+      const keepFocus = opts.keepFocus;
+
+      const pendingFiltered = (pending || []).filter((s) =>
+        matchesQ(s.name, s.admissionNo, s.className, s.phone)
+      );
+      const receipts = allReceipts.filter((p) =>
+        matchesQ(p.student.name, p.student.admissionNo, p.receiptNo, p.student.className)
+      );
+      const receiptById = Object.fromEntries(allReceipts.map((p) => [p.id, p]));
+
+      const collectHtml = `
+        <div class="card table-wrap"><table class="data">
+          <thead><tr><th>Student</th><th>Class</th><th>Balance</th><th></th></tr></thead>
+          <tbody>${
+            pendingFiltered.length
+              ? pendingFiltered
+                  .map(
+                    (s) => `<tr>
+                <td>${UI.esc(s.name)}</td><td>${UI.esc(s.className)}</td><td>${UI.money(s.balance)}</td>
+                <td><button class="btn btn-sm" data-fee="${s.id}">Collect</button></td></tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="4" class="empty">No matching students with balance</td></tr>`
+          }</tbody></table></div>`;
+
+      const receiptsHtml = `
+        <div class="card table-wrap"><table class="data">
+          <thead><tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Mode</th><th>Date</th><th></th></tr></thead>
+          <tbody>${
+            receipts.length
+              ? receipts
+                  .map(
+                    (p) => `<tr class="${p.cancelled ? "row-muted" : ""}">
+                <td>${UI.esc(p.receiptNo)}</td>
+                <td>${UI.esc(p.student.name || "—")}${
+                      p.student.className
+                        ? `<div class="cell-sub">${UI.esc(p.student.className)}</div>`
+                        : ""
+                    }</td>
+                <td>${UI.money(p.amount)}</td>
+                <td>${UI.esc(p.mode)}${
+                      p.chequeStatus ? `<div class="cell-sub">${UI.esc(p.chequeStatus)}</div>` : ""
+                    }</td>
+                <td>${UI.esc(String(p.createdAt || "").slice(0, 10))}</td>
+                <td class="row-actions">
+                  <button type="button" class="btn btn-sm" data-view="${p.id}">View</button>
+                  <button type="button" class="btn btn-sm btn-ghost" data-share="${p.id}">Share</button>
+                  ${
+                    p.mode === "Cheque" && !p.cancelled
+                      ? `<button type="button" class="btn btn-sm btn-ghost" data-cheque="${p.id}">Cheque</button>`
+                      : ""
+                  }
+                  ${
+                    !p.cancelled
+                      ? `<button type="button" class="btn btn-sm btn-ghost" data-cancel="${p.id}">Cancel</button>`
+                      : `<span class="badge badge-danger">Cancelled</span>`
+                  }
+                </td></tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="6" class="empty">No matching receipts</td></tr>`
+          }</tbody></table></div>`;
+
+      root.innerHTML = `
+        <div class="page-header"><div><h2>Fee collection</h2><p>Part-payments and receipts</p></div></div>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="collect" class="${tab === "collect" ? "active" : ""}" aria-selected="${
+            tab === "collect"
+          }">Quick collect (${pendingFiltered.length})</button>
+          <button type="button" role="tab" data-tab="receipts" class="${tab === "receipts" ? "active" : ""}" aria-selected="${
+            tab === "receipts"
+          }">Recent receipts (${receipts.length})</button>
+        </div>
+        <div class="toolbar">
+          <input name="q" type="search" placeholder="Search student name / admission / receipt" value="${UI.esc(
+            q
+          )}" autocomplete="off" />
+        </div>
+        <div id="fees-panel">${tab === "receipts" ? receiptsHtml : collectHtml}</div>`;
+
+      root.querySelectorAll("[data-tab]").forEach((btn) => {
+        btn.onclick = () => render({ tab: btn.dataset.tab });
+      });
+
+      const searchInput = root.querySelector("[name=q]");
+      let searchTimer;
+      searchInput.oninput = () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => render({ q: searchInput.value, keepFocus: true }), 180);
       };
-    });
-    root.querySelectorAll("[data-cheque]").forEach((b) => {
-      b.onclick = async () => {
-        const status = prompt("Status: Pending / Cleared / Bounced", "Cleared");
-        if (!status) return;
-        await Api.call("cheque.updateStatus", { id: b.dataset.cheque, chequeStatus: status });
-        UI.toast("Cheque updated", "ok");
-        feesPage(root);
+      searchInput.onkeydown = (ev) => {
+        if (ev.key === "Enter") {
+          clearTimeout(searchTimer);
+          render({ q: searchInput.value, keepFocus: true });
+        }
       };
-    });
+      if (keepFocus) {
+        searchInput.focus();
+        const len = searchInput.value.length;
+        try {
+          searchInput.setSelectionRange(len, len);
+        } catch (_) {}
+      }
+
+      root.querySelectorAll("[data-fee]").forEach((b) => {
+        b.onclick = () => openCollectFee(b.dataset.fee, () => feesPage(root));
+      });
+      root.querySelectorAll("[data-view]").forEach((b) => {
+        b.onclick = () => viewReceipt(receiptById[b.dataset.view]);
+      });
+      root.querySelectorAll("[data-share]").forEach((b) => {
+        b.onclick = () => shareReceipt(receiptById[b.dataset.share]);
+      });
+      root.querySelectorAll("[data-cancel]").forEach((b) => {
+        b.onclick = async () => {
+          const reason = prompt("Cancel reason?");
+          if (!reason) return;
+          await Api.call("fees.cancel", { id: b.dataset.cancel, reason });
+          feesPage(root);
+        };
+      });
+      root.querySelectorAll("[data-cheque]").forEach((b) => {
+        b.onclick = async () => {
+          const status = prompt("Status: Pending / Cleared / Bounced", "Cleared");
+          if (!status) return;
+          await Api.call("cheque.updateStatus", { id: b.dataset.cheque, chequeStatus: status });
+          UI.toast("Cheque updated", "ok");
+          feesPage(root);
+        };
+      });
+    };
+
+    render();
   }
 
   async function pendingPage(root) {

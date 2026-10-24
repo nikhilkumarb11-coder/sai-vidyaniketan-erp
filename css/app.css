@@ -852,6 +852,44 @@ table.data tbody tr:last-child td {
   color: #fff;
 }
 
+.cell-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.row-muted td {
+  opacity: 0.62;
+}
+
+.receipt-preview {
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1rem;
+  line-height: 1.55;
+}
+
+.receipt-preview .muted,
+.receipt-preview p.muted {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.toolbar input[type="search"] {
+  flex: 1;
+  min-width: min(100%, 220px);
+  max-width: 420px;
+}
+
 .empty {
   text-align: center;
   padding: 2.25rem 1rem;

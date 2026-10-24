@@ -68,6 +68,8 @@ const CONFIG = {
   whatsappTemplates: {
     feeReminder:
       "Dear {parentName}, fee reminder for {studentName} ({class}). Outstanding balance: Rs.{balance}. Kindly pay at the earliest. - {schoolName}",
+    feeReceipt:
+      "Dear {parentName}, fee receipt {receiptNo} for {studentName} ({class}). Amount paid: Rs.{amount} on {date}. Mode: {mode}. Balance: Rs.{balance}. - {schoolName}",
     absentee:
       "Dear {parentName}, {studentName} ({class}) was marked absent on {date}. Please contact the school if needed. - {schoolName}",
     event: "Dear Parent, {message} - {schoolName}",
