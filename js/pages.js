@@ -282,65 +282,26 @@ const Pages = (() => {
     });
   }
 
-  function shareReceipt(r) {
+  function printReceipt(r) {
+    ReceiptPdf.open(r);
+  }
+
+  function viewReceipt(r) {
+    ReceiptPdf.open(r);
+  }
+
+  async function shareReceipt(r) {
     const text = receiptShareText(r);
     const phone = (r.student && r.student.phone) || "";
+    const result = await ReceiptPdf.share(r, text);
+    if (result.aborted) return;
+    if (result.shared) {
+      UI.toast("Receipt PDF shared", "ok");
+      return;
+    }
+    // Desktop / browsers without file share: download PDF, open WhatsApp with caption
+    UI.toast("PDF downloaded — attach it in WhatsApp", "ok");
     window.open(UI.waLink(phone, text), "_blank", "noopener");
-  }
-
-  function printReceipt(r) {
-    const school = r.school || AppCache.school();
-    const st = r.student || {};
-    UI.printHtml(`
-      <div class="print-doc">
-        <div class="print-header">
-          <img src="${CONFIG.school.logo}" alt="">
-          <div>
-            <h2>${UI.esc(school.name)}</h2>
-            <div>${UI.esc(school.address || "")}</div>
-            <div>${UI.esc(CONFIG.receipt.header)}</div>
-          </div>
-        </div>
-        <p><strong>Receipt No:</strong> ${UI.esc(r.receiptNo)} &nbsp; <strong>Date:</strong> ${UI.esc(String(r.createdAt).slice(0, 10))}</p>
-        <p>Student: <strong>${UI.esc(st.name)}</strong> (${UI.esc(st.admissionNo)}) · Class ${UI.esc(st.className)}</p>
-        <p>Amount paid: <strong>${UI.money(r.amount)}</strong> · Mode: ${UI.esc(r.mode)} ${r.reference ? "(" + UI.esc(r.reference) + ")" : ""}</p>
-        <p>Balance after payment: ${UI.money(r.balanceAfter)}</p>
-        <p style="margin-top:2rem">${UI.esc(CONFIG.receipt.signatureLabel)}</p>
-        <div class="ribbon">${UI.esc(school.motto || CONFIG.school.motto)}</div>
-      </div>`);
-  }
-
-  async function viewReceipt(r) {
-    const school = r.school || AppCache.school();
-    const st = r.student || {};
-    const shareHref = UI.waLink(st.phone || "", receiptShareText(r));
-    await UI.modal({
-      title: "Receipt " + (r.receiptNo || ""),
-      submitLabel: "Print",
-      body: `
-        <div class="receipt-preview">
-          <p class="muted">${UI.esc(school.name || "")}</p>
-          <p><strong>${UI.esc(r.receiptNo || "")}</strong> · ${UI.esc(String(r.createdAt || "").slice(0, 10))}</p>
-          <p>Student: <strong>${UI.esc(st.name || "—")}</strong>
-            ${st.admissionNo ? `(${UI.esc(st.admissionNo)})` : ""}
-            ${st.className ? ` · Class ${UI.esc(st.className)}` : ""}</p>
-          <p>Amount paid: <strong>${UI.money(r.amount)}</strong> · ${UI.esc(r.mode || "")}
-            ${r.reference ? ` (${UI.esc(r.reference)})` : ""}</p>
-          <p>Balance after payment: ${UI.money(r.balanceAfter)}</p>
-          ${
-            r.cancelled === true || r.cancelled === "TRUE" || r.cancelled === "true"
-              ? `<p><span class="badge badge-danger">Cancelled</span> ${UI.esc(r.cancelReason || "")}</p>`
-              : ""
-          }
-        </div>
-        <p style="margin-top:1rem">
-          <a class="btn btn-sm" href="${shareHref}" target="_blank" rel="noopener">Share WhatsApp</a>
-        </p>`,
-      onSubmit: async () => {
-        printReceipt(r);
-        return true;
-      }
-    });
   }
 
   async function enquiriesPage(root) {
