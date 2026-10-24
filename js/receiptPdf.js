@@ -432,78 +432,117 @@ const ReceiptPdf = (() => {
       .replace(/"/g, "&quot;");
   }
 
-  /** Open PDF in a viewer tab/modal — never auto-downloads. */
-  function showViewer(blob, filename) {
-    const pdfUrl = URL.createObjectURL(blob);
-    const title = filename || "Receipt";
+  function receiptPreviewHtml(r) {
+    const school = r.school || (typeof AppCache !== "undefined" ? AppCache.school() : {}) || {};
+    const st = r.student || {};
+    const cfg = typeof CONFIG !== "undefined" ? CONFIG : { receipt: {}, school: {} };
+    const schoolName = school.name || (cfg.school && cfg.school.name) || "School";
+    const address = school.address || (cfg.school && cfg.school.address) || "";
+    const logo = (cfg.school && cfg.school.logo) || "assets/logo.jpg";
+    const year =
+      r.academicYear ||
+      (typeof AppCache !== "undefined" && AppCache.get() && AppCache.get().academicYear) ||
+      "";
+    const cancelled = isCancelled(r);
+    const classLabel = st.className
+      ? String(st.className) + (st.section ? "-" + st.section : "")
+      : "—";
 
-    const html = `<!doctype html>
-<html><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>${escHtml(title)}</title>
-<style>
-  html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#0f172a;color:#fff}
-  .bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#0f172a;border-bottom:1px solid #1e293b}
-  .bar strong{flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar a,.bar button{appearance:none;border:1px solid #334155;background:#1e293b;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;text-decoration:none}
-  .bar a.primary,.bar button.primary{background:#2563eb;border-color:#2563eb}
-  .frame{height:calc(100% - 52px);background:#64748b}
-  embed,iframe{width:100%;height:100%;border:0;background:#52525b}
-</style>
-</head><body>
-  <div class="bar">
-    <strong>${escHtml(title)}</strong>
-    <a class="primary" href="${pdfUrl}" download="${escHtml(filename)}">Download</a>
-    <button type="button" onclick="window.print()">Print</button>
-    <button type="button" onclick="window.close()">Close</button>
-  </div>
-  <div class="frame">
-    <embed src="${pdfUrl}" type="application/pdf" />
-  </div>
-</body></html>`;
+    return `
+      <div class="receipt-sheet" id="receipt-print-root">
+        <div class="receipt-sheet-head">
+          <img src="${escHtml(logo)}" alt="" />
+          <div>
+            <strong>${escHtml(schoolName)}</strong>
+            <div>${escHtml(address)}</div>
+            <div>Fee receipt${year ? " · " + escHtml(year) : ""}</div>
+          </div>
+        </div>
+        ${
+          cancelled
+            ? `<div class="receipt-cancelled">Cancelled${
+                r.cancelReason ? " — " + escHtml(r.cancelReason) : ""
+              }</div>`
+            : ""
+        }
+        <div class="receipt-sheet-meta">
+          <div><span>Receipt no.</span><strong>${escHtml(r.receiptNo || "—")}</strong></div>
+          <div><span>Date</span><strong>${escHtml(formatDate(r.createdAt))}</strong></div>
+        </div>
+        <div class="receipt-sheet-grid">
+          <div><span>Student</span><strong>${escHtml(st.name || "—")}</strong></div>
+          <div><span>Class</span><strong>${escHtml(classLabel)}</strong></div>
+          <div><span>Admission no.</span><strong>${escHtml(st.admissionNo || "—")}</strong></div>
+          <div><span>Parent</span><strong>${escHtml(st.parentName || "—")}</strong></div>
+        </div>
+        <div class="receipt-sheet-pay">
+          <div><span>Amount paid</span><strong class="amt">${escHtml(moneyRs(r.amount))}</strong></div>
+          <div><span>Mode</span><strong>${escHtml(r.mode || "—")}</strong></div>
+          <div><span>Reference</span><strong>${escHtml(r.reference || "—")}</strong></div>
+          <div><span>Balance after</span><strong>${escHtml(moneyRs(r.balanceAfter))}</strong></div>
+          ${
+            r.chequeStatus
+              ? `<div><span>Cheque</span><strong>${escHtml(r.chequeStatus)}</strong></div>`
+              : ""
+          }
+        </div>
+        ${r.notes ? `<p class="receipt-notes">${escHtml(r.notes)}</p>` : ""}
+        <p class="receipt-thanks">Thank you for your payment.</p>
+      </div>`;
+  }
 
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.addEventListener("beforeunload", () => URL.revokeObjectURL(pdfUrl));
-      return { mode: "tab", url: pdfUrl };
-    }
-
-    // Popup blocked — in-app overlay viewer (still no download)
+  /** In-app receipt viewer — never opens a new browser tab/window. */
+  function showViewer(blob, filename, receipt) {
+    const title = (receipt && receipt.receiptNo) || filename || "Receipt";
     let overlay = document.getElementById("pdf-viewer-overlay");
     if (overlay) overlay.remove();
+
     overlay = document.createElement("div");
     overlay.id = "pdf-viewer-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.72);display:flex;align-items:stretch;justify-content:center;padding:12px";
+    overlay.className = "receipt-viewer-overlay";
     overlay.innerHTML = `
-      <div style="background:#0f172a;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;width:min(920px,100%);height:min(92vh,100%);box-shadow:0 20px 60px rgba(0,0,0,.35)">
-        <div style="display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid #1e293b;color:#fff">
-          <strong style="flex:1;font:600 14px system-ui">${escHtml(title)}</strong>
-          <a href="${pdfUrl}" download="${escHtml(filename)}" style="color:#fff;background:#2563eb;padding:8px 12px;border-radius:8px;text-decoration:none;font:13px system-ui">Download</a>
-          <button type="button" data-close style="border:1px solid #334155;background:#1e293b;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer">Close</button>
+      <div class="receipt-viewer-panel" role="dialog" aria-modal="true" aria-label="Receipt">
+        <div class="receipt-viewer-bar">
+          <strong>${escHtml(title)}</strong>
+          <button type="button" class="btn btn-sm" data-download>Download PDF</button>
+          <button type="button" class="btn btn-sm btn-ghost" data-print>Print</button>
+          <button type="button" class="btn btn-sm btn-ghost" data-close>Close</button>
         </div>
-        <embed src="${pdfUrl}" type="application/pdf" style="flex:1;width:100%;border:0;background:#64748b" />
+        <div class="receipt-viewer-body">
+          ${receipt ? receiptPreviewHtml(receipt) : `<p class="empty">Receipt ready — tap Download PDF</p>`}
+        </div>
       </div>`;
     document.body.appendChild(overlay);
+    document.body.classList.add("receipt-viewer-open");
+
     const close = () => {
       overlay.remove();
-      URL.revokeObjectURL(pdfUrl);
+      document.body.classList.remove("receipt-viewer-open");
     };
+
     overlay.querySelector("[data-close]").onclick = close;
     overlay.addEventListener("click", (ev) => {
       if (ev.target === overlay) close();
     });
-    return { mode: "overlay", url: pdfUrl };
+    overlay.querySelector("[data-download]").onclick = () => {
+      download(blob, filename);
+    };
+    overlay.querySelector("[data-print]").onclick = () => {
+      const root = overlay.querySelector("#receipt-print-root");
+      if (root && typeof UI !== "undefined" && UI.printHtml) {
+        UI.printHtml(root.outerHTML);
+      } else {
+        window.print();
+      }
+    };
+
+    return { mode: "overlay" };
   }
 
   async function open(r) {
     const blob = await toBlob(r);
     const name = filenameFor(r);
-    showViewer(blob, name);
+    showViewer(blob, name, r);
     return { blob, filename: name };
   }
 
@@ -523,8 +562,8 @@ const ReceiptPdf = (() => {
     } catch (e) {
       if (e && e.name === "AbortError") return { shared: false, aborted: true, blob, filename };
     }
-    // Share fallback: open viewer + optional WhatsApp caption (caller handles WA)
-    showViewer(blob, filename);
+    // Share unavailable — show in-app receipt (no new window)
+    showViewer(blob, filename, r);
     return { shared: false, downloaded: false, viewed: true, blob, filename };
   }
 

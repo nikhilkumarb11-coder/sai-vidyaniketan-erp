@@ -4,7 +4,7 @@
  */
 const CONFIG = {
   /** Bump this whenever the phone app must drop its old cache */
-  appVersion: "23",
+  appVersion: "24",
   apiUrl: "https://script.google.com/macros/s/AKfycbwR5t_A3S-vAKmLLA-XI5S4EYCApegFuJVyQMsqD96d_M8fKPMGVhiqdhr_ptSd-DSn/exec",
   school: {
     name: "Sai Vidyaniketan School",

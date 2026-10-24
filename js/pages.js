@@ -388,9 +388,9 @@ const Pages = (() => {
       UI.toast("Receipt PDF shared", "ok");
       return;
     }
-    // Desktop: viewer opens PDF; WhatsApp caption ready — attach via Download if needed
-    UI.toast("PDF opened — use Download, then attach in WhatsApp", "ok");
-    window.open(UI.waLink(phone, text), "_blank", "noopener");
+    // Native share unavailable — receipt stays in-app; open WhatsApp with caption
+    UI.toast("Use Download PDF, then attach in WhatsApp", "ok");
+    if (phone) window.open(UI.waLink(phone, text), "_blank", "noopener");
   }
 
   async function enquiriesPage(root) {
