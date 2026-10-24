@@ -148,6 +148,13 @@ function sheetCacheRemove_(memKey) {
   }
 }
 
+/** Bumps the tab's change stamp so core.sync can skip untouched sheets. */
+function touchStamp_(sheetName) {
+  try {
+    PropertiesService.getScriptProperties().setProperty("mod_" + sheetName, nowIso_());
+  } catch (e) {}
+}
+
 function uid_(prefix) {
   prefix = prefix || "id";
   return prefix + "_" + Utilities.getUuid().replace(/-/g, "").slice(0, 12);
@@ -284,6 +291,7 @@ function appendObjects_(sheetName, objs) {
     sheetCacheRemove_(memKey);
   } catch (e) {}
   if (sheetName === "Settings") SETTINGS_MEM_ = null;
+  touchStamp_(sheetName);
   return prepared;
 }
 
@@ -336,6 +344,7 @@ function updateObjectsById_(sheetName, patches) {
     sheetCacheRemove_("rows_" + sheetName);
   } catch (e) {}
   if (sheetName === "Settings") SETTINGS_MEM_ = null;
+  touchStamp_(sheetName);
   return updated;
 }
 
@@ -371,6 +380,7 @@ function setSetting_(key, value) {
     if (rows[i].key === key) {
       getSheet_("Settings").getRange(rows[i]._row, 1, 1, 2).setValues([[key, str]]);
       invalidateSheetCache_("Settings");
+      touchStamp_("Settings");
       return;
     }
   }

@@ -268,6 +268,54 @@ const DemoAPI = (() => {
     if (user.role !== "Principal") throw Object.assign(new Error("Forbidden"), { code: "FORBIDDEN" });
   }
 
+  /** Maps demo localStorage keys → CORE_TABS names used by the live sync. */
+  function demoCoreTables(db) {
+    return {
+      Students: db.students || [],
+      StudentServices: db.studentServices || [],
+      FeePayments: db.feePayments || [],
+      Installments: db.installments || [],
+      Enquiries: db.enquiries || [],
+      Attendance: db.attendance || [],
+      Expenses: db.expenses || [],
+      Staff: db.staff || [],
+      StockItems: db.stockItems || [],
+      StockMovements: db.stockMovements || [],
+      Notices: db.notices || [],
+      Services: db.services || [],
+      Classes: db.classes || [],
+      Exams: db.exams || [],
+      Subjects: db.subjects || [],
+      ExpenseCategories: db.expenseCategories || [],
+      Routes: db.routes || [],
+      Users: (db.users || []).map(publicUser),
+      Certificates: db.certificates || [],
+      Salaries: db.salaries || [],
+      Timetable: db.timetable || [],
+      YearSummary: db.yearSummary || []
+    };
+  }
+
+  function demoBootstrap(db, user) {
+    const serverTime = now();
+    return {
+      user: publicUser(user),
+      academicYear: db.settings.academicYear,
+      modules: db.settings.modules,
+      services: db.services.filter((s) => s.active !== false),
+      classes: db.classes,
+      grading: db.settings.grading,
+      exams: db.exams.filter((e) => e.active !== false),
+      whatsappTemplates: db.settings.whatsappTemplates,
+      school: db.settings.school,
+      theme: db.settings.theme,
+      expenseCategories: db.expenseCategories,
+      subjects: db.subjects || [],
+      serverTime,
+      tables: demoCoreTables(db)
+    };
+  }
+
   function studentServices(db, studentId) {
     return db.studentServices.filter((s) => s.studentId === studentId && s.active !== false);
   }
@@ -350,22 +398,7 @@ const DemoAPI = (() => {
         db.sessions.push({ token, userId: u.id, expiresAt, createdAt: now() });
         audit(db, u, "login", "Users", u.id);
         const out = { token, expiresAt, user: publicUser(u) };
-        if (p.withData !== false) {
-          out.bootstrap = {
-            user: publicUser(u),
-            academicYear: db.settings.academicYear,
-            modules: db.settings.modules,
-            services: db.services.filter((s) => s.active !== false),
-            classes: db.classes,
-            grading: db.settings.grading,
-            exams: db.exams.filter((e) => e.active !== false),
-            whatsappTemplates: db.settings.whatsappTemplates,
-            school: db.settings.school,
-            theme: db.settings.theme,
-            expenseCategories: db.expenseCategories,
-            subjects: []
-          };
-        }
+        if (p.withData !== false) out.bootstrap = demoBootstrap(db, u);
         return ok(out);
       }
       case "logout": {
@@ -373,20 +406,12 @@ const DemoAPI = (() => {
         return ok({ loggedOut: true });
       }
       case "bootstrap":
-        return ok({
-          user: publicUser(user),
-          academicYear: db.settings.academicYear,
-          modules: db.settings.modules,
-          services: db.services.filter((s) => s.active !== false),
-          classes: db.classes,
-          grading: db.settings.grading,
-          exams: db.exams.filter((e) => e.active !== false),
-          whatsappTemplates: db.settings.whatsappTemplates,
-          school: db.settings.school,
-          theme: db.settings.theme,
-          expenseCategories: db.expenseCategories,
-          subjects: []
-        });
+        return ok(demoBootstrap(db, user));
+      case "core.sync": {
+        const tables = demoCoreTables(db);
+        // Demo always returns a full snapshot; client merge handles it.
+        return ok({ serverTime: now(), full: !p.since, tables });
+      }
 
       case "settings.get":
         requirePrincipal(user);

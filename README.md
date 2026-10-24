@@ -25,7 +25,7 @@ No Google account is required for demo mode (`CONFIG.demoMode: true` in `config.
 
 1. Create a Google Spreadsheet owned by the school account.
 2. **Extensions → Apps Script**. Delete the default file.
-3. Copy every file from the `gas/` folder into the Apps Script project (same names: `Code.gs`, `Utils.gs`, `Auth.gs`, `Setup.gs`, `Students.gs`, `Fees.gs`, `Attendance.gs`, `Ops.gs`, `Finance.gs`, `Academics.gs`, plus `appsscript.json`).
+3. Copy every file from the `gas/` folder into the Apps Script project (same names: `Code.gs`, `Utils.gs`, `Auth.gs`, `CoreSync.gs`, `Setup.gs`, `Students.gs`, `Fees.gs`, `Attendance.gs`, `Ops.gs`, `Finance.gs`, `Academics.gs`, plus `appsscript.json`).
 4. Select `setup` in the function dropdown and **Run**. Authorize when prompted.
 5. **Deploy → New deployment → Web app**
    - Execute as: **Me**

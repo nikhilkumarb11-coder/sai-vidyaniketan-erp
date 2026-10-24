@@ -166,6 +166,7 @@ function buildBootstrap_(user) {
   var school = getSetting_("school", {});
   var theme = getSetting_("theme", {});
 
+  var serverTime = nowIso_();
   return {
     user: publicUser_(user),
     academicYear: currentAcademicYear_(),
@@ -182,7 +183,10 @@ function buildBootstrap_(user) {
     }),
     subjects: readAllObjects_("Subjects").filter(function (s) {
       return isTruthy_(s.active);
-    })
+    }),
+    serverTime: serverTime,
+    // Phase B: full core tables so the device can render without further list calls.
+    tables: buildCoreTables_()
   };
 }
 

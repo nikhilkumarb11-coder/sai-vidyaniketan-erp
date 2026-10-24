@@ -6,6 +6,7 @@ var ACTION_MAP = {
   login: { fn: authLogin, auth: false },
   logout: { fn: authLogout, auth: true },
   bootstrap: { fn: authBootstrap, auth: true },
+  "core.sync": { fn: coreSync, auth: true },
 
   "settings.get": { fn: settingsGet, auth: true },
   "settings.save": { fn: settingsSave, auth: true },

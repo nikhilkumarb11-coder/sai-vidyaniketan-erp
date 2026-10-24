@@ -281,10 +281,23 @@ const Api = (() => {
   }
 
   async function call(action, payload = {}, opts = {}) {
+    // Phase B: hot reads come from the on-device core store (instant).
+    if (!opts.skipCore && typeof Core !== "undefined" && Core.canServe(action)) {
+      try {
+        return Core.serve(action, payload);
+      } catch (e) {
+        if (e && e.code === "NOT_FOUND") throw e;
+        // Fall through to network if local serve fails unexpectedly
+      }
+    }
+
     if (useDemo()) {
       const data = await DemoAPI.handle(action, { ...payload, token: getToken() });
       if (READ_ACTIONS.has(action)) remember(cacheKey(action, payload), data);
-      else if (action !== "login") invalidateForMutation(action);
+      else if (action !== "login" && action !== "core.sync") {
+        invalidateForMutation(action);
+        if (typeof Core !== "undefined") Core.applyWrite(action, data);
+      }
       return data;
     }
 
@@ -307,8 +320,9 @@ const Api = (() => {
 
     if (READ_ACTIONS.has(action)) {
       remember(key, data);
-    } else if (action !== "login") {
+    } else if (action !== "login" && action !== "core.sync") {
       invalidateForMutation(action);
+      if (typeof Core !== "undefined") Core.applyWrite(action, data);
     }
     return data;
   }
