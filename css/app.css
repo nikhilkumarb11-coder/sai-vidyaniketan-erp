@@ -2099,24 +2099,15 @@ body.receipt-viewer-open {
   min-width: 0;
 }
 
-.chart-bars-scroller {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.15rem;
-}
-
 .chart-bars {
   display: flex;
   align-items: flex-end;
-  gap: 0.35rem;
-  height: 168px;
-  min-width: 100%;
-  width: max(100%, calc(var(--bar-count, 8) * 2.35rem));
+  gap: 2px;
+  height: 150px;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
-  padding: 0.25rem 0.15rem 0;
+  padding: 0.2rem 0 0;
   overflow: hidden;
 }
 
@@ -2127,14 +2118,12 @@ body.receipt-viewer-open {
   align-items: center;
   height: 100%;
   justify-content: flex-end;
-  min-width: 2rem;
-  max-width: 3rem;
-  position: relative;
+  min-width: 0;
 }
 
 .chart-bars .bar {
   width: 100%;
-  max-width: 22px;
+  max-width: 20px;
   background: #4477aa;
   border-radius: 4px 4px 2px 2px;
   min-height: 4px;
@@ -2235,30 +2224,27 @@ body.receipt-viewer-open {
 }
 
 .chart-bars .bar-count {
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 700;
   color: var(--ink);
   line-height: 1;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
   flex: 0 0 auto;
 }
 
 .chart-bars .lbl {
-  position: static;
-  transform: none;
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
   width: 100%;
   max-width: 100%;
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-weight: 650;
   color: var(--muted);
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
-  hyphens: auto;
-  max-height: 2.4em;
+  max-height: 2.3em;
   overflow: hidden;
   flex: 0 0 auto;
 }
