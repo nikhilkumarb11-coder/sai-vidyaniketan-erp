@@ -75,12 +75,16 @@ const App = (() => {
   }
 
   function wireLogout() {
-    document.querySelectorAll("[data-logout]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        await Auth.logout();
-        showLogin();
-        UI.toast("You are logged out");
-      });
+    if (wireLogout.done) return;
+    wireLogout.done = true;
+    document.addEventListener("click", async (ev) => {
+      const btn = ev.target.closest("[data-logout]");
+      if (!btn) return;
+      ev.preventDefault();
+      if (typeof Router !== "undefined" && Router.closeMore) Router.closeMore();
+      await Auth.logout();
+      showLogin();
+      UI.toast("You are logged out");
     });
   }
 

@@ -14,12 +14,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/theme.css?v=27" />
-  <link rel="stylesheet" href="css/app.css?v=27" />
+  <link rel="stylesheet" href="css/theme.css?v=28" />
+  <link rel="stylesheet" href="css/app.css?v=28" />
   <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
   <!-- Hide login instantly if a token exists — prevents mobile PWA refresh flash -->
   <script>
-    window.__SVS_BUILD__ = "27";
+    window.__SVS_BUILD__ = "28";
     (function () {
       try {
         if (localStorage.getItem("svs_token") || sessionStorage.getItem("svs_token")) {
@@ -54,11 +54,11 @@
         <form id="login-form">
           <div class="form-row">
             <label for="username">User name</label>
-            <input id="username" name="username" autocomplete="username" required value="admin" />
+            <input id="username" name="username" autocomplete="username" required placeholder="User name" />
           </div>
           <div class="form-row">
             <label for="password">Password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required value="Admin@123" />
+            <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Password" />
           </div>
           <button class="btn btn-block" type="submit">Log in</button>
         </form>
@@ -111,22 +111,25 @@
       <button type="button" id="more-close" aria-label="Close">✕</button>
     </div>
     <div class="more-drawer-body" id="more-drawer-body"></div>
+    <div class="more-drawer-foot">
+      <button type="button" class="btn btn-ghost btn-block" data-logout>Log out</button>
+    </div>
   </div>
 
   <div id="toasts"></div>
 
-  <script src="config.js?v=27"></script>
-  <script src="js/demo.js?v=27"></script>
-  <script src="js/ledger.js?v=27"></script>
-  <script src="js/core.js?v=27"></script>
-  <script src="js/api.js?v=27"></script>
-  <script src="js/cache.js?v=27"></script>
-  <script src="js/ui.js?v=27"></script>
-  <script src="js/receiptPdf.js?v=27"></script>
-  <script src="js/auth.js?v=27"></script>
-  <script src="js/router.js?v=27"></script>
-  <script src="js/pages.js?v=27"></script>
-  <script src="js/pwa.js?v=27"></script>
-  <script src="js/app.js?v=27"></script>
+  <script src="config.js?v=28"></script>
+  <script src="js/demo.js?v=28"></script>
+  <script src="js/ledger.js?v=28"></script>
+  <script src="js/core.js?v=28"></script>
+  <script src="js/api.js?v=28"></script>
+  <script src="js/cache.js?v=28"></script>
+  <script src="js/ui.js?v=28"></script>
+  <script src="js/receiptPdf.js?v=28"></script>
+  <script src="js/auth.js?v=28"></script>
+  <script src="js/router.js?v=28"></script>
+  <script src="js/pages.js?v=28"></script>
+  <script src="js/pwa.js?v=28"></script>
+  <script src="js/app.js?v=28"></script>
 </body>
 </html>

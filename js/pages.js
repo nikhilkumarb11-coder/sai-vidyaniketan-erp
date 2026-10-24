@@ -1986,75 +1986,99 @@ const Pages = (() => {
     };
 
     root.innerHTML = `
-      <div class="page-header page-header-inline">
-        <div><h2>Settings</h2><p>Turn features on/off, set fees and tests</p></div>
-        <button class="btn btn-ghost" id="backup">Save backup</button>
+      <div class="page-header page-header-compact page-header-inline">
+        <div><h2>Settings</h2><p>Features, fees, tests, and services</p></div>
+        <button class="btn btn-ghost btn-sm" id="backup">Save backup</button>
       </div>
-      <div class="card"><h3>Features</h3>
-        ${Object.keys(modules)
-          .map(
-            (k) =>
-              `<label class="switch"><span>${UI.esc(moduleLabels[k] || k)}</span><input type="checkbox" data-mod="${k}" ${modules[k] ? "checked" : ""}></label>`
-          )
-          .join("")}
-        <button class="btn" id="saveMod" style="margin-top:1rem">Save features</button>
-      </div>
-      <div class="card"><h3>Tests &amp; max marks</h3>
-        <p class="import-hint">Used on the Marks screen. Max marks stops entry above the limit (e.g. 25).</p>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Test</th><th>Max</th><th>Weight %</th><th>Order</th><th></th></tr></thead>
-        <tbody>${
-          exams.length
-            ? exams
-                .map(
-                  (e) => `<tr>
-              <td data-label="Test">${UI.esc(e.name)}</td>
-              <td data-label="Max">${UI.esc(e.maxMarks)}</td>
-              <td data-label="Weight %">${UI.esc(e.weight)}</td>
-              <td data-label="Order">${UI.esc(e.order)}</td>
-              <td class="row-actions"><button type="button" class="btn btn-sm btn-ghost" data-edit-exam="${e.id}">Edit</button></td>
-            </tr>`
-                )
-                .join("")
-            : `<tr><td colspan="5" class="empty">No tests yet — add Slip Test / Final below</td></tr>`
-        }</tbody></table></div>
-        <button class="btn" id="addExam" style="margin-top:0.75rem">+ Add test</button>
-      </div>
-      <div class="card"><h3>Yearly fee by class</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Yearly fee (₹)</th></tr></thead>
-        <tbody>${CONFIG.classes
-          .map(
-            (c) =>
-              `<tr><td data-label="Class">${UI.esc(c)}</td>
-              <td data-label="Fee"><input data-fee-class="${UI.esc(c)}" type="number" min="0" value="${fees[c] != null ? fees[c] : ""}" style="width:140px;max-width:100%;min-height:40px"></td></tr>`
-          )
-          .join("")}</tbody></table></div>
-        <button class="btn" id="saveFees" style="margin-top:0.75rem">Save class fees</button>
-      </div>
-      <div class="card"><h3>Subjects for each class</h3>
-        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem">Write subject names separated by commas</p>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Subjects</th></tr></thead>
-        <tbody>${CONFIG.classes
-          .map((c) => {
-            const list = subjectsMap[c] || [];
-            return `<tr><td data-label="Class">${UI.esc(c)}</td>
-              <td data-label="Subjects"><input data-subj-class="${UI.esc(c)}" value="${UI.esc(list.join(", "))}" style="width:100%;min-height:40px"></td></tr>`;
-          })
-          .join("")}</tbody></table></div>
-        <button class="btn" id="saveSubj" style="margin-top:0.75rem">Save subjects</button>
-      </div>
-      <div class="card"><h3>Extra services</h3>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Cost</th><th>Type</th><th>On</th></tr></thead>
-        <tbody>${(services || [])
-          .map(
-            (s) =>
-              `<tr><td data-label="Name">${UI.esc(s.name)}</td><td data-label="Cost">${UI.money(s.cost)}</td>
-              <td data-label="Type">${UI.esc(s.billingType)}</td>
-              <td data-label="On">${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
-          )
-          .join("")}</tbody></table></div>
-        <button class="btn" id="addSvc" style="margin-top:0.75rem">+ Add service</button>
-      </div>
-      ${Api.useDemo() ? `<div class="card"><button class="btn btn-accent" id="resetDemo">Reset demo data</button></div>` : ""}`;
+      <div class="settings-stack">
+        <section class="card settings-section">
+          <h3>1. Features</h3>
+          <p class="settings-note">Turn school screens on or off</p>
+          <div class="settings-switches">
+            ${Object.keys(modules)
+              .map(
+                (k) =>
+                  `<label class="switch"><span>${UI.esc(moduleLabels[k] || k)}</span><input type="checkbox" data-mod="${k}" ${
+                    modules[k] ? "checked" : ""
+                  }></label>`
+              )
+              .join("")}
+          </div>
+          <button class="btn btn-block" id="saveMod">Save features</button>
+        </section>
+        <section class="card settings-section">
+          <h3>2. Tests &amp; max marks</h3>
+          <p class="settings-note">Used on Marks. Max marks stops entry above the limit.</p>
+          <div class="table-wrap"><table class="data"><thead><tr><th>Test</th><th>Max</th><th>Weight %</th><th>Order</th><th></th></tr></thead>
+          <tbody>${
+            exams.length
+              ? exams
+                  .map(
+                    (e) => `<tr>
+                <td data-label="Test">${UI.esc(e.name)}</td>
+                <td data-label="Max">${UI.esc(e.maxMarks)}</td>
+                <td data-label="Weight %">${UI.esc(e.weight)}</td>
+                <td data-label="Order">${UI.esc(e.order)}</td>
+                <td class="row-actions"><button type="button" class="btn btn-sm btn-ghost" data-edit-exam="${e.id}">Edit</button></td>
+              </tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="5" class="empty">No tests yet</td></tr>`
+          }</tbody></table></div>
+          <button class="btn btn-block" id="addExam">+ Add test</button>
+        </section>
+        <section class="card settings-section">
+          <h3>3. Yearly fee by class</h3>
+          <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Yearly fee (₹)</th></tr></thead>
+          <tbody>${CONFIG.classes
+            .map(
+              (c) =>
+                `<tr><td data-label="Class">${UI.esc(c)}</td>
+                <td data-label="Fee"><input data-fee-class="${UI.esc(c)}" type="number" min="0" value="${
+                  fees[c] != null ? fees[c] : ""
+                }" class="settings-input"></td></tr>`
+            )
+            .join("")}</tbody></table></div>
+          <button class="btn btn-block" id="saveFees">Save class fees</button>
+        </section>
+        <section class="card settings-section">
+          <h3>4. Subjects for each class</h3>
+          <p class="settings-note">Write subject names separated by commas</p>
+          <div class="table-wrap"><table class="data"><thead><tr><th>Class</th><th>Subjects</th></tr></thead>
+          <tbody>${CONFIG.classes
+            .map((c) => {
+              const list = subjectsMap[c] || [];
+              return `<tr><td data-label="Class">${UI.esc(c)}</td>
+                <td data-label="Subjects"><input data-subj-class="${UI.esc(c)}" value="${UI.esc(
+                list.join(", ")
+              )}" class="settings-input settings-input-wide"></td></tr>`;
+            })
+            .join("")}</tbody></table></div>
+          <button class="btn btn-block" id="saveSubj">Save subjects</button>
+        </section>
+        <section class="card settings-section">
+          <h3>5. Extra services</h3>
+          <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Cost</th><th>Type</th><th>On</th></tr></thead>
+          <tbody>${
+            (services || []).length
+              ? (services || [])
+                  .map(
+                    (s) =>
+                      `<tr><td data-label="Name">${UI.esc(s.name)}</td><td data-label="Cost">${UI.money(s.cost)}</td>
+                  <td data-label="Type">${UI.esc(s.billingType)}</td>
+                  <td data-label="On">${s.active !== false && s.active !== "FALSE" ? "Yes" : "No"}</td></tr>`
+                  )
+                  .join("")
+              : `<tr><td colspan="4" class="empty">No extra services yet</td></tr>`
+          }</tbody></table></div>
+          <button class="btn btn-block" id="addSvc">+ Add service</button>
+        </section>
+        ${
+          Api.useDemo()
+            ? `<section class="card settings-section"><button class="btn btn-accent btn-block" id="resetDemo">Reset demo data</button></section>`
+            : ""
+        }
+      </div>`;
 
     const refreshBoot = async () => {
       const boot = await Api.call("bootstrap", {});
@@ -2134,22 +2158,43 @@ const Pages = (() => {
   async function usersPage(root) {
     const list = await Api.call("users.list", {});
     root.innerHTML = `
-      <div class="page-header"><div><h2>Logins</h2><p>Who can open this app</p></div><button class="btn" id="add">+ Add login</button></div>
-      <div class="card table-wrap"><table class="data"><thead><tr><th>User name</th><th>Full name</th><th>Role</th><th>Class</th><th></th></tr></thead>
-      <tbody>${list
-        .map(
-          (u) =>
-            `<tr><td>${UI.esc(u.username)}</td><td>${UI.esc(u.displayName)}</td><td>${UI.esc(u.role)}</td><td>${UI.esc(u.classAssigned)}</td>
-            <td><button class="btn btn-sm btn-ghost" data-reset="${u.id}">New password</button>
-            ${u.active === false ? "" : `<button class="btn btn-sm btn-ghost" data-dis="${u.id}">Turn off</button>`}</td></tr>`
-        )
-        .join("")}</tbody></table></div>`;
+      <div class="page-header page-header-compact page-header-inline">
+        <div><h2>Logins</h2><p>Who can open this app</p></div>
+        <button class="btn btn-sm" id="add">+ Add login</button>
+      </div>
+      <ul class="login-list">
+        ${
+          (list || []).length
+            ? list
+                .map(
+                  (u) => `<li class="login-card ${u.active === false ? "is-off" : ""}">
+            <div class="login-card-main">
+              <strong class="login-user">${UI.esc(u.username)}</strong>
+              <span class="login-meta">${UI.esc(u.displayName || "—")} · ${UI.esc(u.role)}${
+                    u.classAssigned ? " · Class " + UI.esc(u.classAssigned) : ""
+                  }</span>
+              ${u.active === false ? `<span class="badge badge-warn">Off</span>` : ""}
+            </div>
+            <div class="login-card-actions">
+              <button type="button" class="btn btn-sm btn-ghost" data-reset="${u.id}">New password</button>
+              ${
+                u.active === false
+                  ? ""
+                  : `<button type="button" class="btn btn-sm btn-ghost" data-dis="${u.id}">Turn off</button>`
+              }
+            </div>
+          </li>`
+                )
+                .join("")
+            : `<li class="login-empty">No logins yet</li>`
+        }
+      </ul>`;
     root.querySelector("#add").onclick = async () => {
       await UI.modal({
         title: "Add login",
         body: `<div class="form-grid">
-          <div class="form-row"><label>User name</label><input name="username"></div>
-          <div class="form-row"><label>Password</label><input name="password" value="ChangeMe@123"></div>
+          <div class="form-row"><label>User name</label><input name="username" autocomplete="off"></div>
+          <div class="form-row"><label>Password</label><input name="password" type="password" autocomplete="new-password" placeholder="Choose a password"></div>
           <div class="form-row"><label>Full name</label><input name="displayName"></div>
           <div class="form-row"><label>Role</label><select name="role"><option>Teacher</option><option>Principal</option></select></div>
           <div class="form-row"><label>Class (for teachers)</label><input name="classAssigned" placeholder="1"></div></div>`,
@@ -2168,7 +2213,7 @@ const Pages = (() => {
     };
     root.querySelectorAll("[data-reset]").forEach((b) => {
       b.onclick = async () => {
-        const pw = prompt("Enter a new password", "ChangeMe@123");
+        const pw = prompt("Enter a new password");
         if (!pw) return;
         await Api.call("users.resetPassword", { id: b.dataset.reset, password: pw });
         UI.toast("Password updated", "ok");
