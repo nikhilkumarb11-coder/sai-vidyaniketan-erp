@@ -62,6 +62,7 @@ var ACTION_MAP = {
   "routes.save": { fn: routesSave, auth: true },
 
   "whatsapp.log": { fn: whatsappLog, auth: true },
+  "messages.list": { fn: messagesList, auth: true },
   "messages.templates": { fn: messagesTemplates, auth: true },
 
   "dashboard.principal": { fn: dashboardPrincipal, auth: true },

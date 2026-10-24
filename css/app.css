@@ -2366,10 +2366,52 @@ body.receipt-viewer-open {
   padding: 0.25rem 0.7rem;
 }
 
+.wa-send-list li.is-sent {
+  background: #f8fafc;
+}
+
+.wa-sent-badge {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #047857;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  white-space: nowrap;
+}
+
 .wa-send-empty {
   padding: 0.85rem;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.wa-filters {
+  margin: 0.35rem 0 0.65rem;
+}
+
+.wa-banner {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.wa-banner-warn {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+
+.wa-banner-ok {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
 }
 
 .hidden {

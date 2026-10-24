@@ -175,6 +175,44 @@ function whatsappLog(payload, user) {
   return ok_(row);
 }
 
+/** Recent WhatsApp logs — optional filters: type, date (YYYY-MM-DD), studentId */
+function messagesList(payload, user) {
+  var rows = readAllObjects_("MessageLog").filter(function (r) {
+    return isTruthy_(r.active);
+  });
+  if (payload && payload.type) {
+    rows = rows.filter(function (r) {
+      return String(r.type || "") === String(payload.type);
+    });
+  }
+  if (payload && payload.date) {
+    var d = String(payload.date).slice(0, 10);
+    rows = rows.filter(function (r) {
+      return String(r.sentAt || "").slice(0, 10) === d;
+    });
+  }
+  if (payload && payload.studentId) {
+    rows = rows.filter(function (r) {
+      return String(r.studentId || "") === String(payload.studentId);
+    });
+  }
+  rows.sort(function (a, b) {
+    return String(b.sentAt || "").localeCompare(String(a.sentAt || ""));
+  });
+  return ok_(
+    rows.slice(0, 800).map(function (r) {
+      return {
+        id: r.id,
+        type: r.type,
+        studentId: r.studentId,
+        phone: r.phone,
+        sentAt: r.sentAt,
+        sentBy: r.sentBy
+      };
+    })
+  );
+}
+
 function messagesTemplates(payload, user) {
   if (payload.templates && user.role === "Principal") {
     setSetting_("whatsappTemplates", payload.templates);

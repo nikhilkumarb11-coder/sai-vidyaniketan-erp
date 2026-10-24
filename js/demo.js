@@ -1096,6 +1096,28 @@ const DemoAPI = (() => {
         db.messageLog.push(row);
         return ok(row);
       }
+      case "messages.list": {
+        let rows = (db.messageLog || []).filter((r) => r.active !== false);
+        if (p.type) rows = rows.filter((r) => r.type === p.type);
+        if (p.date) {
+          const d = String(p.date).slice(0, 10);
+          rows = rows.filter((r) => String(r.sentAt || "").slice(0, 10) === d);
+        }
+        if (p.studentId) rows = rows.filter((r) => String(r.studentId) === String(p.studentId));
+        rows = rows
+          .slice()
+          .sort((a, b) => String(b.sentAt || "").localeCompare(String(a.sentAt || "")))
+          .slice(0, 800)
+          .map((r) => ({
+            id: r.id,
+            type: r.type,
+            studentId: r.studentId,
+            phone: r.phone,
+            sentAt: r.sentAt,
+            sentBy: r.sentBy
+          }));
+        return ok(rows);
+      }
       case "messages.templates":
         if (p.templates && user.role === "Principal") db.settings.whatsappTemplates = p.templates;
         return ok(db.settings.whatsappTemplates);

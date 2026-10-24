@@ -892,6 +892,7 @@ const Pages = (() => {
   }
 
   async function whatsappPage(root) {
+    const today = new Date().toISOString().slice(0, 10);
     const [pending, templates, allStudents] = await Api.callAll([
       { action: "fees.pending" },
       { action: "messages.templates" },
@@ -901,12 +902,120 @@ const Pages = (() => {
     const classOrder = CONFIG.classes || [];
     let tplKey = tplKeys.includes("feeReminder") ? "feeReminder" : tplKeys[0] || "";
     let classFilter = "";
+    let attDate = today;
+    let absenteeState = { saved: false, classesMarked: 0, students: [] };
+    let sentIds = new Set();
 
     const activeStudents = (allStudents || []).filter((s) => s.status === "Active" || !s.status);
+    const studentById = Object.fromEntries(activeStudents.map((s) => [String(s.id), s]));
     const balanceById = {};
     (pending || []).forEach((s) => {
       balanceById[s.id] = s.balance;
     });
+
+    const parseIds = (raw) => {
+      if (Array.isArray(raw)) return raw.map(String);
+      if (typeof raw === "string") {
+        try {
+          const v = JSON.parse(raw || "[]");
+          return Array.isArray(v) ? v.map(String) : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const sentStorageKey = (type, studentId, date) => `svs_wa_sent_${date}_${type}_${studentId}`;
+    const markSentLocal = (type, studentId, date) => {
+      try {
+        localStorage.setItem(sentStorageKey(type, studentId, date), "1");
+      } catch (e) {}
+      sentIds.add(String(studentId));
+    };
+    const loadLocalSent = (type, date) => {
+      const ids = new Set();
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          const prefix = `svs_wa_sent_${date}_${type}_`;
+          if (k && k.indexOf(prefix) === 0) ids.add(k.slice(prefix.length));
+        }
+      } catch (e) {}
+      return ids;
+    };
+
+    const loadSentForType = async (type, date) => {
+      const local = loadLocalSent(type, date);
+      try {
+        const rows = await Api.call("messages.list", { type, date });
+        (rows || []).forEach((r) => {
+          if (r.studentId) local.add(String(r.studentId));
+        });
+      } catch (e) {
+        /* API may not be redeployed yet — local marks still work */
+      }
+      sentIds = local;
+    };
+
+    const absenteesFromCore = (date) => {
+      if (typeof Core === "undefined" || !Core.isReady()) return null;
+      const tables = Core.getTables();
+      const rows = (tables.Attendance || []).filter((a) => String(a.date || "").slice(0, 10) === date);
+      if (!rows.length) return { saved: false, classesMarked: 0, students: [] };
+      const absentIds = new Set();
+      const classes = new Set();
+      rows.forEach((r) => {
+        classes.add(String(r.className || ""));
+        parseIds(r.absentIds).forEach((id) => absentIds.add(id));
+        parseIds(r.leaveIds).forEach((id) => absentIds.add(id));
+      });
+      const students = [...absentIds]
+        .map((id) => studentById[id])
+        .filter(Boolean)
+        .map((s) => ({
+          ...s,
+          balance: balanceById[s.id] != null ? balanceById[s.id] : s.balance || 0
+        }));
+      return { saved: true, classesMarked: classes.size, students };
+    };
+
+    const loadAbsentees = async (date) => {
+      const fromCore = absenteesFromCore(date);
+      if (fromCore) {
+        absenteeState = fromCore;
+        return;
+      }
+      const results = await Api.callAll(
+        classOrder.map((c) => ({ action: "attendance.get", payload: { className: c, date } }))
+      );
+      const absentIds = new Set();
+      let classesMarked = 0;
+      results.forEach((data, idx) => {
+        if (!data || !data.record) return;
+        classesMarked += 1;
+        parseIds(data.record.absentIds).forEach((id) => absentIds.add(String(id)));
+        parseIds(data.record.leaveIds).forEach((id) => absentIds.add(String(id)));
+        // Prefer roster phone/parent from attendance response when present
+        (data.students || []).forEach((s) => {
+          if (!studentById[String(s.id)]) {
+            studentById[String(s.id)] = {
+              ...s,
+              className: classOrder[idx],
+              balance: 0
+            };
+          }
+        });
+      });
+      const students = [...absentIds]
+        .map((id) => studentById[id])
+        .filter(Boolean)
+        .map((s) => ({
+          ...s,
+          balance: balanceById[s.id] != null ? balanceById[s.id] : s.balance || 0
+        }));
+      absenteeState = { saved: classesMarked > 0, classesMarked, students };
+    };
 
     const labelForTpl = (k) => {
       const map = {
@@ -922,6 +1031,7 @@ const Pages = (() => {
 
     const listForType = () => {
       if (tplKey === "feeReminder") return pending || [];
+      if (tplKey === "absentee") return absenteeState.students || [];
       return activeStudents.map((s) => ({
         ...s,
         balance: balanceById[s.id] != null ? balanceById[s.id] : s.balance || 0
@@ -944,6 +1054,8 @@ const Pages = (() => {
         phone: ""
       };
 
+    const msgDate = () => (tplKey === "absentee" ? attDate : today);
+
     const buildPreview = (key, custom) => {
       const sample = sampleFrom();
       return UI.fillTemplate(templates[key] || "", {
@@ -951,7 +1063,7 @@ const Pages = (() => {
         studentName: sample.name || "Student",
         class: sample.className || "",
         balance: sample.balance != null ? sample.balance : 0,
-        date: new Date().toISOString().slice(0, 10),
+        date: msgDate(),
         message: custom || "(your message)",
         schoolName: AppCache.school().name,
         receiptNo: "R2627-00001",
@@ -961,8 +1073,21 @@ const Pages = (() => {
     };
 
     const showAmount = () => tplKey === "feeReminder";
+    const isSent = (id) => sentIds.has(String(id));
 
-    const render = () => {
+    const emptyMessage = () => {
+      if (tplKey === "feeReminder") return "No students with fees due";
+      if (tplKey === "absentee") {
+        if (!absenteeState.saved) return "No attendance saved for this date — mark attendance first";
+        return "No students marked absent for this date";
+      }
+      return "No students in this class";
+    };
+
+    const render = async () => {
+      if (tplKey === "absentee") await loadAbsentees(attDate);
+      await loadSentForType(tplKey, msgDate());
+
       const rows = filteredList();
       const customVal = root.querySelector("#customMsg") ? root.querySelector("#customMsg").value : "";
       root.innerHTML = `
@@ -983,7 +1108,12 @@ const Pages = (() => {
             <textarea id="customMsg" placeholder="Add extra text for events or special notes">${UI.esc(
               customVal
             )}</textarea></div>
-          <div class="toolbar toolbar-compact" style="margin:0.35rem 0 0.65rem">
+          <div class="toolbar toolbar-compact wa-filters">
+            ${
+              tplKey === "absentee"
+                ? `<input type="date" id="wa-date" value="${UI.esc(attDate)}" aria-label="Attendance date" />`
+                : ""
+            }
             <select id="wa-class" aria-label="Filter by class">
               <option value="">All classes (${listForType().length})</option>
               ${classOrder
@@ -997,25 +1127,39 @@ const Pages = (() => {
                 .join("")}
             </select>
           </div>
+          ${
+            tplKey === "absentee"
+              ? absenteeState.saved
+                ? `<p class="wa-banner wa-banner-ok">Absent on ${UI.esc(attDate)} · ${
+                    absenteeState.classesMarked
+                  } class(es) with attendance saved</p>`
+                : `<p class="wa-banner wa-banner-warn">Attendance not saved for ${UI.esc(
+                    attDate
+                  )}. Open Attendance, mark absentees, and Save — then return here.</p>`
+              : ""
+          }
           <p class="cell-sub" style="margin:0 0 0.45rem">To send (${rows.length})</p>
           ${
             rows.length
               ? `<ul class="wa-send-list">${rows
-                  .map(
-                    (s) => `<li>
+                  .map((s) => {
+                    const sent = isSent(s.id);
+                    return `<li class="${sent ? "is-sent" : ""}">
                 <span class="wa-send-name">${UI.esc(s.name)} · ${UI.esc(s.className)}</span>
                 ${showAmount() ? `<span class="wa-send-amt">${UI.money(s.balance)}</span>` : ""}
-                <button type="button" class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(
-                      s.phone
-                    )}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(
-                      s.parentName
-                    )}" data-class="${UI.esc(s.className)}" data-bal="${s.balance || 0}">Send</button>
-              </li>`
-                  )
+                ${
+                  sent
+                    ? `<span class="wa-sent-badge">Sent</span>`
+                    : `<button type="button" class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(
+                        s.phone
+                      )}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(
+                        s.parentName
+                      )}" data-class="${UI.esc(s.className)}" data-bal="${s.balance || 0}">Send</button>`
+                }
+              </li>`;
+                  })
                   .join("")}</ul>`
-              : `<div class="wa-send-empty">${
-                  tplKey === "feeReminder" ? "No students with fees due" : "No students in this class"
-                }</div>`
+              : `<div class="wa-send-empty">${emptyMessage()}</div>`
           }
         </div>`;
 
@@ -1034,34 +1178,46 @@ const Pages = (() => {
         classFilter = e.target.value;
         render();
       };
+      const dateEl = root.querySelector("#wa-date");
+      if (dateEl) {
+        dateEl.onchange = (e) => {
+          attDate = e.target.value || today;
+          render();
+        };
+      }
       root.querySelector("#customMsg").oninput = syncPreview;
       syncPreview();
 
       root.querySelectorAll("[data-id]").forEach((btn) => {
         btn.onclick = async () => {
           const key = root.querySelector("#tpl").value;
+          const date = msgDate();
           const msg = UI.fillTemplate(templates[key], {
             parentName: btn.dataset.parent,
             studentName: btn.dataset.name,
             class: btn.dataset.class,
             balance: btn.dataset.bal,
-            date: new Date().toISOString().slice(0, 10),
+            date,
             message: root.querySelector("#customMsg").value,
             schoolName: AppCache.school().name
           });
           window.open(UI.waLink(btn.dataset.phone, msg), "_blank");
-          await Api.call("whatsapp.log", {
-            type: key,
-            studentId: btn.dataset.id,
-            phone: btn.dataset.phone,
-            message: msg
-          });
+          try {
+            await Api.call("whatsapp.log", {
+              type: key,
+              studentId: btn.dataset.id,
+              phone: btn.dataset.phone,
+              message: msg
+            });
+          } catch (e) {}
+          markSentLocal(key, btn.dataset.id, date);
           UI.toast("Message opened", "ok");
+          render();
         };
       });
     };
 
-    render();
+    await render();
   }
 
   async function expensesPage(root) {
