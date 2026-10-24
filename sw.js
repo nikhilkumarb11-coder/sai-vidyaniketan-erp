@@ -1,6 +1,6 @@
 /* Sai Vidyaniketan ERP — shell cache for installable PWA */
-const CACHE = "svs-erp-shell-v20";
-const BUILD = "21";
+const CACHE = "svs-erp-shell-v22";
+const BUILD = "22";
 const SHELL = [
   "./",
   "./index.html",
@@ -51,11 +51,6 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
-      .then(() =>
-        self.clients.matchAll({ type: "window" }).then((clients) => {
-          clients.forEach((c) => c.postMessage({ type: "SW_ACTIVATED", build: BUILD }));
-        })
-      )
   );
 });
 

@@ -14,49 +14,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/theme.css?v=20" />
-  <link rel="stylesheet" href="css/app.css?v=20" />
+  <link rel="stylesheet" href="css/theme.css?v=22" />
+  <link rel="stylesheet" href="css/app.css?v=22" />
   <link rel="icon" href="assets/logo.jpg" type="image/jpeg" />
   <!-- Hide login instantly if a token exists — prevents mobile PWA refresh flash -->
   <script>
-    window.__SVS_BUILD__ = "21";
+    window.__SVS_BUILD__ = "22";
     (function () {
       try {
         if (localStorage.getItem("svs_token") || sessionStorage.getItem("svs_token")) {
           document.documentElement.classList.add("has-session");
         }
       } catch (e) {}
-      // Force phone apps off a stuck old service worker (runs before other scripts)
+      // Mark build only — do NOT reload here (reload loops happened when HTML + SW both reloaded).
       try {
         var build = window.__SVS_BUILD__;
-        var key = "svs_html_build";
-        if (localStorage.getItem(key) !== build) {
-          var finish = function () {
-            try {
-              localStorage.setItem(key, build);
-            } catch (e2) {}
-            if (sessionStorage.getItem("svs_html_reloaded") !== build) {
-              sessionStorage.setItem("svs_html_reloaded", build);
-              location.reload();
-            }
-          };
-          var tasks = [];
-          if ("serviceWorker" in navigator) {
-            tasks.push(
-              navigator.serviceWorker.getRegistrations().then(function (regs) {
-                return Promise.all(regs.map(function (r) { return r.unregister(); }));
-              })
-            );
-          }
-          if (window.caches) {
-            tasks.push(
-              caches.keys().then(function (keys) {
-                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
-              })
-            );
-          }
-          Promise.all(tasks).then(finish).catch(finish);
-        }
+        localStorage.setItem("svs_html_build", build);
       } catch (e) {}
     })();
   </script>
@@ -142,18 +115,18 @@
 
   <div id="toasts"></div>
 
-  <script src="config.js?v=20"></script>
-  <script src="js/demo.js?v=20"></script>
-  <script src="js/ledger.js?v=20"></script>
-  <script src="js/core.js?v=20"></script>
-  <script src="js/api.js?v=20"></script>
-  <script src="js/cache.js?v=20"></script>
-  <script src="js/ui.js?v=20"></script>
-  <script src="js/receiptPdf.js?v=20"></script>
-  <script src="js/auth.js?v=20"></script>
-  <script src="js/router.js?v=20"></script>
-  <script src="js/pages.js?v=20"></script>
-  <script src="js/pwa.js?v=20"></script>
-  <script src="js/app.js?v=20"></script>
+  <script src="config.js?v=22"></script>
+  <script src="js/demo.js?v=22"></script>
+  <script src="js/ledger.js?v=22"></script>
+  <script src="js/core.js?v=22"></script>
+  <script src="js/api.js?v=22"></script>
+  <script src="js/cache.js?v=22"></script>
+  <script src="js/ui.js?v=22"></script>
+  <script src="js/receiptPdf.js?v=22"></script>
+  <script src="js/auth.js?v=22"></script>
+  <script src="js/router.js?v=22"></script>
+  <script src="js/pages.js?v=22"></script>
+  <script src="js/pwa.js?v=22"></script>
+  <script src="js/app.js?v=22"></script>
 </body>
 </html>
