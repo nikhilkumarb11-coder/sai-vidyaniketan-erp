@@ -1,5 +1,5 @@
 /* Sai Vidyaniketan ERP — shell cache for installable PWA */
-const CACHE = "svs-erp-shell-v11";
+const CACHE = "svs-erp-shell-v12";
 const SHELL = [
   "./",
   "./index.html",
@@ -21,6 +21,10 @@ const SHELL = [
   "./js/pwa.js",
   "./js/app.js"
 ];
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+});
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -47,29 +51,43 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for navigations; cache fallback offline
-  if (req.mode === "navigate") {
+  const sameOrigin = url.origin === self.location.origin;
+  const path = url.pathname;
+  const isAppShell =
+    sameOrigin &&
+    (req.mode === "navigate" ||
+      path.endsWith(".js") ||
+      path.endsWith(".css") ||
+      path.endsWith("index.html") ||
+      path.endsWith("config.js") ||
+      path.endsWith("sw.js") ||
+      path.endsWith("manifest.webmanifest"));
+
+  // Network-first for HTML/JS/CSS so session fixes deploy immediately
+  if (isAppShell) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put("./index.html", copy));
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match(req).then((c) => c || caches.match("./index.html")))
     );
     return;
   }
 
-  // Cache-first for same-origin static assets
-  if (url.origin === self.location.origin) {
+  // Cache-first for images and other static assets
+  if (sameOrigin) {
     event.respondWith(
       caches.match(req).then((cached) => {
         const fetched = fetch(req)
           .then((res) => {
             if (res && res.ok) {
               const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(req, copy));
+              caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
             }
             return res;
           })

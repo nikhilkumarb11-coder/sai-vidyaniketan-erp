@@ -37,17 +37,42 @@ const Auth = (() => {
     } catch (e) {}
   }
 
+  /** Load token + profile from localStorage into memory (sync, before any network). */
+  function hydrateFromStorage() {
+    const cached = readPersistedSession();
+    if (cached && cached.user && Api.getToken()) {
+      AppCache.set(cached);
+      return cached;
+    }
+    return null;
+  }
+
+  function hasLocalSession() {
+    return !!(Api.getToken() && (AppCache.user() || (readPersistedSession() && readPersistedSession().user)));
+  }
+
   function isAuthError(e) {
     if (!e) return false;
     if (e.code === "AUTH") return true;
     const msg = String(e.message || e || "").toLowerCase();
+    // Strict: only clear session for real auth failures (not network / HTML / CORS)
     return (
-      msg.includes("invalid session") ||
-      msg.includes("session expired") ||
-      msg.includes("not authenticated") ||
-      msg.includes("user inactive") ||
-      msg.includes("invalid credentials")
+      msg === "invalid session" ||
+      msg === "session expired" ||
+      msg === "not authenticated" ||
+      msg.indexOf("invalid session") === 0 ||
+      msg.indexOf("session expired") === 0 ||
+      msg.indexOf("not authenticated") === 0 ||
+      msg.indexOf("user inactive") >= 0
     );
+  }
+
+  function forceLocalLogout() {
+    Core.stopPullLoop();
+    Core.clear().catch(() => {});
+    Api.clearToken();
+    clearPersistedSession();
+    AppCache.clear();
   }
 
   function refreshBootstrapInBackground() {
@@ -58,11 +83,39 @@ const Auth = (() => {
         if (boot.tables) Core.hydrateFromBootstrap(boot);
         else Core.pull({ full: !Core.isReady() }).catch(() => {});
       })
-      .catch(() => {});
+      .catch((e) => {
+        // Only kick to login when the server says the session is truly dead
+        if (isAuthError(e)) {
+          forceLocalLogout();
+          if (typeof App !== "undefined" && App.showLogin) {
+            App.showLogin();
+            if (typeof UI !== "undefined") UI.toast("Session expired — please sign in again", "error");
+          }
+        }
+      });
   }
 
   async function adoptSession(data) {
+    if (!data || !data.token) throw new Error("Login did not return a session token");
     Api.setToken(data.token);
+
+    // Persist immediately so a refresh mid-load still stays signed in
+    const early = data.bootstrap || {
+      user: data.user,
+      school: CONFIG.school,
+      modules: CONFIG.modulesDefault,
+      academicYear: CONFIG.school.academicYear,
+      theme: CONFIG.theme,
+      classFees: CONFIG.classFees,
+      subjectsByClass: CONFIG.subjectsByClass,
+      whatsappTemplates: CONFIG.whatsappTemplates,
+      grading: CONFIG.grading
+    };
+    if (early.user) {
+      AppCache.set(early);
+      persistSession(early);
+    }
+
     let boot = data.bootstrap;
     if (!boot) boot = await Api.call("bootstrap", {}, { skipCore: true, skipCache: true });
     AppCache.set(boot);
@@ -82,30 +135,30 @@ const Auth = (() => {
     try {
       await Api.call("logout", {}, { skipCore: true });
     } catch (e) {}
-    Core.stopPullLoop();
-    await Core.clear();
-    Api.clearToken();
-    clearPersistedSession();
-    AppCache.clear();
+    forceLocalLogout();
   }
 
   /**
-   * Keep the user signed in across refresh.
-   * Only Sign out / real AUTH failures return to the login screen.
+   * Refresh must NOT send the user to login.
+   * Use local session first; sync bootstrap in the background.
    */
   async function restore() {
     if (!Api.getToken()) return null;
 
-    const cached = readPersistedSession();
-    if (cached && cached.user) {
-      AppCache.set(cached);
-    }
+    hydrateFromStorage();
 
     try {
       await Core.restoreFromIdb();
-      if (Core.isReady()) Core.startPullLoop();
     } catch (e) {}
 
+    // Fast path: local profile exists → stay in the app, sync later
+    if (AppCache.user()) {
+      Core.startPullLoop();
+      refreshBootstrapInBackground();
+      return AppCache.get();
+    }
+
+    // No local profile yet (first load after update) — need one network bootstrap
     try {
       const boot = await Api.call("bootstrap", {}, { skipCore: true, skipCache: true });
       AppCache.set(boot);
@@ -116,42 +169,11 @@ const Auth = (() => {
       return boot;
     } catch (e) {
       if (isAuthError(e)) {
-        Core.stopPullLoop();
-        await Core.clear();
-        Api.clearToken();
-        clearPersistedSession();
-        AppCache.clear();
+        forceLocalLogout();
         return null;
       }
-
-      // Network / Apps Script cold start — stay logged in with cached profile
-      if (AppCache.user()) {
-        Core.startPullLoop();
-        setTimeout(refreshBootstrapInBackground, 1500);
-        return AppCache.get();
-      }
-
-      // Token exists but no cache yet (first refresh after update) — one short retry
-      await new Promise((r) => setTimeout(r, 1200));
-      try {
-        const boot = await Api.call("bootstrap", {}, { skipCore: true, skipCache: true });
-        AppCache.set(boot);
-        persistSession(boot);
-        if (boot.tables) Core.hydrateFromBootstrap(boot);
-        else await Core.pull({ full: true });
-        Core.startPullLoop();
-        return boot;
-      } catch (e2) {
-        if (isAuthError(e2)) {
-          Core.stopPullLoop();
-          await Core.clear();
-          Api.clearToken();
-          clearPersistedSession();
-          AppCache.clear();
-        }
-        // Keep token on transient errors so the next refresh can succeed
-        return null;
-      }
+      // Keep token; next visit can hydrate after a successful login/bootstrap
+      return null;
     }
   }
 
@@ -160,5 +182,13 @@ const Auth = (() => {
     return u && u.role === "Principal";
   }
 
-  return { login, logout, restore, isPrincipal };
+  return {
+    login,
+    logout,
+    restore,
+    isPrincipal,
+    hydrateFromStorage,
+    hasLocalSession,
+    persistSession
+  };
 })();

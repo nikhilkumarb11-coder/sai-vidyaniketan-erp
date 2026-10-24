@@ -98,15 +98,23 @@ const App = (() => {
     Router.start();
     if (typeof PWA !== "undefined") PWA.start();
     Api.warm();
-    let session = await Auth.restore();
-    // Brief retry when token exists but first bootstrap hit a cold start
-    if (!session && Api.getToken()) {
-      await new Promise((r) => setTimeout(r, 800));
-      Api.warm();
-      session = await Auth.restore();
+
+    // Sync hydrate from localStorage BEFORE any network — refresh must not flash login
+    Auth.hydrateFromStorage();
+    if (Auth.hasLocalSession()) {
+      if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
+      showShell();
+      try {
+        await Router.go();
+      } catch (e) {}
+      // Sync in background (does not send user to login on network errors)
+      Auth.restore().catch(() => {});
+      return;
     }
+
+    const session = await Auth.restore();
     if (session) {
-      if (!location.hash) location.hash = "#/dashboard";
+      if (!location.hash || location.hash === "#") location.hash = "#/dashboard";
       await Router.go();
     } else {
       showLogin();
