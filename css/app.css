@@ -1497,10 +1497,6 @@ table.data tbody tr:last-child td {
   width: 100%;
 }
 
-.dues-card h3 {
-  margin-bottom: 0.65rem;
-}
-
 .dues-list {
   list-style: none;
   margin: 0;
