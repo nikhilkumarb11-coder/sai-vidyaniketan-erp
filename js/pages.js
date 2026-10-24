@@ -898,20 +898,61 @@ const Pages = (() => {
   }
 
   async function whatsappPage(root) {
-    const [pending, templates] = await Api.callAll([
+    const [pending, templates, allStudents] = await Api.callAll([
       { action: "fees.pending" },
-      { action: "messages.templates" }
+      { action: "messages.templates" },
+      { action: "students.list", payload: {} }
     ]);
     const tplKeys = Object.keys(templates || {});
-    const sample = (pending && pending[0]) || {
-      parentName: "Parent",
-      name: "Student",
-      className: "1",
-      balance: 0,
-      phone: ""
+    const classOrder = CONFIG.classes || [];
+    let tplKey = tplKeys.includes("feeReminder") ? "feeReminder" : tplKeys[0] || "";
+    let classFilter = "";
+
+    const activeStudents = (allStudents || []).filter((s) => s.status === "Active" || !s.status);
+    const balanceById = {};
+    (pending || []).forEach((s) => {
+      balanceById[s.id] = s.balance;
+    });
+
+    const labelForTpl = (k) => {
+      const map = {
+        feeReminder: "Fee reminder",
+        feeReceipt: "Fee receipt",
+        absentee: "Absent notice",
+        event: "Event / notice",
+        complaint: "Complaint / note",
+        custom: "Custom message"
+      };
+      return map[k] || k;
     };
-    const buildPreview = (key, custom) =>
-      UI.fillTemplate(templates[key] || "", {
+
+    const listForType = () => {
+      if (tplKey === "feeReminder") return pending || [];
+      return activeStudents.map((s) => ({
+        ...s,
+        balance: balanceById[s.id] != null ? balanceById[s.id] : s.balance || 0
+      }));
+    };
+
+    const filteredList = () => {
+      const list = listForType();
+      if (!classFilter) return list;
+      return list.filter((s) => UI.classMatch(s.className, classFilter));
+    };
+
+    const sampleFrom = () =>
+      filteredList()[0] ||
+      listForType()[0] || {
+        parentName: "Parent",
+        name: "Student",
+        className: "1",
+        balance: 0,
+        phone: ""
+      };
+
+    const buildPreview = (key, custom) => {
+      const sample = sampleFrom();
+      return UI.fillTemplate(templates[key] || "", {
         parentName: sample.parentName || "Parent",
         studentName: sample.name || "Student",
         class: sample.className || "",
@@ -923,54 +964,110 @@ const Pages = (() => {
         amount: 4000,
         mode: "Cash"
       });
-
-    root.innerHTML = `
-      <div class="page-header"><div><h2>WhatsApp</h2><p>Pick a message and send to parents</p></div></div>
-      <div class="card">
-        <div class="form-row"><label>Message type</label>
-          <select id="tpl">${tplKeys
-            .map((k) => `<option value="${k}">${UI.esc(k)}</option>`)
-            .join("")}</select></div>
-        <div class="form-row"><label>Message preview</label>
-          <div class="tpl-preview" id="tpl-preview"></div></div>
-        <div class="form-row"><label>Your own words (optional)</label>
-          <textarea id="customMsg" placeholder="Add extra text for events or special notes"></textarea></div>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Student</th><th>Amount due</th><th></th></tr></thead>
-        <tbody>${(pending || [])
-          .map(
-            (s) => `<tr>
-            <td data-label="Student">${UI.esc(s.name)} (${UI.esc(s.className)})</td>
-            <td data-label="Amount due">${UI.money(s.balance)}</td>
-            <td class="row-actions"><button class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(s.phone)}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(s.parentName)}" data-class="${UI.esc(s.className)}" data-bal="${s.balance}">Send</button></td></tr>`
-          )
-          .join("") || `<tr><td colspan="3" class="empty">No students with fees due</td></tr>`}</tbody></table></div>
-      </div>`;
-
-    const syncPreview = () => {
-      const key = root.querySelector("#tpl").value;
-      root.querySelector("#tpl-preview").textContent = buildPreview(key, root.querySelector("#customMsg").value);
     };
-    root.querySelector("#tpl").onchange = syncPreview;
-    root.querySelector("#customMsg").oninput = syncPreview;
-    syncPreview();
 
-    root.querySelectorAll("[data-id]").forEach((btn) => {
-      btn.onclick = async () => {
+    const showAmount = () => tplKey === "feeReminder";
+
+    const render = () => {
+      const rows = filteredList();
+      const customVal = root.querySelector("#customMsg") ? root.querySelector("#customMsg").value : "";
+      root.innerHTML = `
+        <div class="page-header"><div><h2>WhatsApp</h2><p>Pick a message and send to parents</p></div></div>
+        <div class="card">
+          <div class="form-row"><label>Message type</label>
+            <select id="tpl">${tplKeys
+              .map(
+                (k) =>
+                  `<option value="${UI.esc(k)}" ${k === tplKey ? "selected" : ""}>${UI.esc(
+                    labelForTpl(k)
+                  )}</option>`
+              )
+              .join("")}</select></div>
+          <div class="form-row"><label>Message preview</label>
+            <div class="tpl-preview" id="tpl-preview"></div></div>
+          <div class="form-row"><label>Your own words (optional)</label>
+            <textarea id="customMsg" placeholder="Add extra text for events or special notes">${UI.esc(
+              customVal
+            )}</textarea></div>
+          <div class="toolbar toolbar-compact" style="margin:0.35rem 0 0.65rem">
+            <select id="wa-class" aria-label="Filter by class">
+              <option value="">All classes (${listForType().length})</option>
+              ${classOrder
+                .map((c) => {
+                  const n = listForType().filter((s) => UI.classMatch(s.className, c)).length;
+                  if (!n && classFilter !== c) return "";
+                  return `<option value="${UI.esc(c)}" ${
+                    classFilter === c ? "selected" : ""
+                  }>${UI.esc(c)} (${n})</option>`;
+                })
+                .join("")}
+            </select>
+          </div>
+          <p class="cell-sub" style="margin:0 0 0.45rem">To send (${rows.length})</p>
+          ${
+            rows.length
+              ? `<ul class="wa-send-list">${rows
+                  .map(
+                    (s) => `<li>
+                <span class="wa-send-name">${UI.esc(s.name)} · ${UI.esc(s.className)}</span>
+                ${showAmount() ? `<span class="wa-send-amt">${UI.money(s.balance)}</span>` : ""}
+                <button type="button" class="btn btn-sm" data-id="${s.id}" data-phone="${UI.esc(
+                      s.phone
+                    )}" data-name="${UI.esc(s.name)}" data-parent="${UI.esc(
+                      s.parentName
+                    )}" data-class="${UI.esc(s.className)}" data-bal="${s.balance || 0}">Send</button>
+              </li>`
+                  )
+                  .join("")}</ul>`
+              : `<div class="wa-send-empty">${
+                  tplKey === "feeReminder" ? "No students with fees due" : "No students in this class"
+                }</div>`
+          }
+        </div>`;
+
+      const syncPreview = () => {
         const key = root.querySelector("#tpl").value;
-        const msg = UI.fillTemplate(templates[key], {
-          parentName: btn.dataset.parent,
-          studentName: btn.dataset.name,
-          class: btn.dataset.class,
-          balance: btn.dataset.bal,
-          date: new Date().toISOString().slice(0, 10),
-          message: root.querySelector("#customMsg").value,
-          schoolName: AppCache.school().name
-        });
-        window.open(UI.waLink(btn.dataset.phone, msg), "_blank");
-        await Api.call("whatsapp.log", { type: key, studentId: btn.dataset.id, phone: btn.dataset.phone, message: msg });
-        UI.toast("Message opened", "ok");
+        root.querySelector("#tpl-preview").textContent = buildPreview(
+          key,
+          root.querySelector("#customMsg").value
+        );
       };
-    });
+      root.querySelector("#tpl").onchange = (e) => {
+        tplKey = e.target.value;
+        render();
+      };
+      root.querySelector("#wa-class").onchange = (e) => {
+        classFilter = e.target.value;
+        render();
+      };
+      root.querySelector("#customMsg").oninput = syncPreview;
+      syncPreview();
+
+      root.querySelectorAll("[data-id]").forEach((btn) => {
+        btn.onclick = async () => {
+          const key = root.querySelector("#tpl").value;
+          const msg = UI.fillTemplate(templates[key], {
+            parentName: btn.dataset.parent,
+            studentName: btn.dataset.name,
+            class: btn.dataset.class,
+            balance: btn.dataset.bal,
+            date: new Date().toISOString().slice(0, 10),
+            message: root.querySelector("#customMsg").value,
+            schoolName: AppCache.school().name
+          });
+          window.open(UI.waLink(btn.dataset.phone, msg), "_blank");
+          await Api.call("whatsapp.log", {
+            type: key,
+            studentId: btn.dataset.id,
+            phone: btn.dataset.phone,
+            message: msg
+          });
+          UI.toast("Message opened", "ok");
+        };
+      });
+    };
+
+    render();
   }
 
   async function expensesPage(root) {
@@ -1322,26 +1419,39 @@ const Pages = (() => {
   function reportCardHtml(c, data) {
     const school = data.school || AppCache.school();
     const examNames = (data.exams || []).map((e) => e.name);
+    const subjects =
+      (c.subjects || []).length > 0
+        ? c.subjects
+        : [{ subject: "—", exams: {}, total: null, grade: "—" }];
     return `
       <div class="print-doc card" style="margin-bottom:1.5rem;page-break-after:always">
         <div class="print-header">
           <img src="${CONFIG.school.logo}" alt="">
-          <div><h2>${UI.esc(school.name)}</h2><div>${UI.esc(school.address || "")}</div>
-          <div>Report Card · ${UI.esc(AppCache.get().academicYear)}</div></div>
+          <div>
+            <h2>${UI.esc(school.name)}</h2>
+            <div>${UI.esc(school.address || "")}</div>
+            <div>Report Card · ${UI.esc(AppCache.get().academicYear)}</div>
+          </div>
         </div>
-        <p><strong>${UI.esc(c.student.name)}</strong> · Adm ${UI.esc(c.student.admissionNo)} · Class ${UI.esc(c.student.className)} · Parent ${UI.esc(c.student.parentName)}</p>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Subject</th>${examNames
+        <p class="print-meta"><strong>${UI.esc(c.student.name)}</strong> · Adm ${UI.esc(
+          c.student.admissionNo
+        )} · Class ${UI.esc(c.student.className)} · Parent ${UI.esc(c.student.parentName)}</p>
+        <div class="table-wrap"><table class="data keep-table"><thead><tr><th>Subject</th>${examNames
           .map((n) => `<th>${UI.esc(n)}</th>`)
           .join("")}<th>Total</th><th>Grade</th></tr></thead>
-        <tbody>${c.subjects
+        <tbody>${subjects
           .map(
             (r) =>
               `<tr><td>${UI.esc(r.subject)}</td>${examNames
-                .map((n) => `<td>${r.exams[n] != null ? r.exams[n] : "—"}</td>`)
-                .join("")}<td>${r.total != null ? r.total : "—"}</td><td>${UI.esc(r.grade)}</td></tr>`
+                .map((n) => `<td>${r.exams && r.exams[n] != null ? r.exams[n] : "—"}</td>`)
+                .join("")}<td>${r.total != null ? r.total : "—"}</td><td>${UI.esc(r.grade || "—")}</td></tr>`
           )
           .join("")}</tbody></table></div>
-        <p>Overall: ${c.summary.percent != null ? c.summary.percent + "%" : "—"} · Grade ${UI.esc(c.summary.grade)} · ${UI.esc(c.summary.result)} ${c.summary.rank ? "· Rank " + c.summary.rank : ""}</p>
+        <p class="print-summary">Overall: ${
+          c.summary.percent != null ? c.summary.percent + "%" : "—"
+        } · Grade ${UI.esc(c.summary.grade)} · ${UI.esc(c.summary.result)}${
+          c.summary.rank ? " · Rank " + c.summary.rank : ""
+        }</p>
         <p style="margin-top:1.5rem">Class Teacher _____________ &nbsp;&nbsp; Principal _____________</p>
         <div class="ribbon">${UI.esc(school.motto || CONFIG.school.motto)}</div>
       </div>`;

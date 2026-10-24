@@ -88,11 +88,28 @@ const UI = (() => {
   }
 
   function printHtml(html) {
+    const build =
+      (typeof CONFIG !== "undefined" && CONFIG.appVersion) ||
+      (typeof window !== "undefined" && window.__SVS_BUILD__) ||
+      "23";
     const w = window.open("", "_blank");
     w.document.write(`<!doctype html><html><head><title>Print</title>
-      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/app.css">
-      <style>body{background:#fff;padding:1rem}</style>
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <link rel="stylesheet" href="css/theme.css?v=${build}"><link rel="stylesheet" href="css/app.css?v=${build}">
+      <style>
+        body{background:#fff;padding:0.75rem;font-family:inherit}
+        .print-doc{box-shadow:none;border:none;max-width:none;margin:0 0 1.25rem;page-break-after:always}
+        .print-doc .table-wrap{overflow:visible;border:1px solid #cbd5e1}
+        .print-doc table.data,.print-doc table.data.keep-table{display:table;width:100%;min-width:0;border-collapse:collapse}
+        .print-doc table.data thead{display:table-header-group}
+        .print-doc table.data tbody tr{display:table-row;background:transparent;border:none;box-shadow:none;margin:0;padding:0}
+        .print-doc table.data th,.print-doc table.data td{display:table-cell;text-align:left;padding:0.35rem 0.45rem;border:1px solid #e2e8f0;white-space:nowrap}
+        .print-doc table.data td::before{content:none!important;display:none!important}
+        .print-header{display:flex;align-items:center;gap:0.75rem}
+        .print-header h2,.print-header > div > div{text-align:left}
+        @media print{body{padding:0}.print-doc{page-break-after:always}}
+      </style>
       </head><body>${html}</body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 400);
