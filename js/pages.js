@@ -64,13 +64,24 @@ const Pages = (() => {
                 .join("")}
             </div>
           </div>
-          <div class="card">
+          <div class="card dues-card">
             <h3>Highest fees still due</h3>
-            <div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Class</th><th>Amount due</th></tr></thead>
-            <tbody>${(d.fees.topDefaulters || [])
-              .map((x) => `<tr><td>${UI.esc(x.name)}</td><td>${UI.esc(x.className)}</td><td>${UI.money(x.balance)}</td></tr>`)
-              .join("") || `<tr><td colspan="3" class="empty">None</td></tr>`}</tbody></table></div>
-            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">Spent this month: ${UI.money(d.expenseMonth)} · Fees collected this month: ${UI.money(d.fees.month)}</p>
+            <ul class="dues-list">
+              ${(d.fees.topDefaulters || []).length
+                ? (d.fees.topDefaulters || [])
+                    .map(
+                      (x) => `<li class="dues-row">
+                  <div class="dues-who">
+                    <span class="dues-name">${UI.esc(x.name)}</span>
+                    <span class="dues-class">Class ${UI.esc(x.className)}</span>
+                  </div>
+                  <span class="dues-amt">${UI.money(x.balance)}</span>
+                </li>`
+                    )
+                    .join("")
+                : `<li class="dues-empty">None</li>`}
+            </ul>
+            <p class="dues-foot">Spent this month: ${UI.money(d.expenseMonth)} · Fees collected this month: ${UI.money(d.fees.month)}</p>
           </div>
         </div>
         <div class="grid grid-2">
