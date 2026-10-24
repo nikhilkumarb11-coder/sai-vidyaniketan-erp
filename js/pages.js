@@ -771,24 +771,25 @@ const Pages = (() => {
       data.students = students;
 
       const absent = new Set((data.record && data.record.absentIds) || []);
-      const leave = new Set((data.record && data.record.leaveIds) || []);
+      // Old "leave" marks count as absent now that L is removed
+      ((data.record && data.record.leaveIds) || []).forEach((id) => absent.add(id));
       try {
         const draft = JSON.parse(localStorage.getItem("svs_att_draft_" + className + "_" + date) || "null");
         if (draft && !data.record) {
           (draft.absentIds || []).forEach((id) => absent.add(id));
-          (draft.leaveIds || []).forEach((id) => leave.add(id));
+          (draft.leaveIds || []).forEach((id) => absent.add(id));
         }
       } catch (e) {}
 
-      const statusOf = (id) => (leave.has(id) ? "leave" : absent.has(id) ? "absent" : "present");
+      const statusOf = (id) => (absent.has(id) ? "absent" : "present");
       const chip = (val, cur) =>
         `<button type="button" class="att-chip ${cur === val ? "active att-" + val : ""}" data-set="${val}">${
-          val === "present" ? "P" : val === "absent" ? "A" : "L"
+          val === "present" ? "P" : "A"
         }</button>`;
 
       root.innerHTML = `
         <div class="page-header page-header-compact">
-          <div><h2>Attendance</h2><p>Tap P / A / L — everyone starts as Present</p></div>
+          <div><h2>Attendance</h2><p>Tap P or A — everyone starts as Present</p></div>
         </div>
         <div class="toolbar toolbar-compact sticky-tools">
           <select id="cls" ${user.role === "Teacher" ? "disabled" : ""}>${UI.classOptions(className)}</select>
@@ -807,7 +808,7 @@ const Pages = (() => {
                       return `<div class="att-row check-item" data-id="${s.id}" data-status="${st}">
                   <span class="att-name">${UI.esc(s.name)}</span>
                   <div class="att-chips" role="group" aria-label="Attendance for ${UI.esc(s.name)}">
-                    ${chip("present", st)}${chip("absent", st)}${chip("leave", st)}
+                    ${chip("present", st)}${chip("absent", st)}
                   </div>
                 </div>`;
                     })
@@ -819,16 +820,13 @@ const Pages = (() => {
 
       const readStatus = (row) => row.dataset.status || "present";
       const persistDraft = () => {
-        const absentIds = [],
-          leaveIds = [];
+        const absentIds = [];
         root.querySelectorAll(".att-row").forEach((row) => {
-          const st = readStatus(row);
-          if (st === "absent") absentIds.push(row.dataset.id);
-          if (st === "leave") leaveIds.push(row.dataset.id);
+          if (readStatus(row) === "absent") absentIds.push(row.dataset.id);
         });
         localStorage.setItem(
           "svs_att_draft_" + className + "_" + date,
-          JSON.stringify({ absentIds, leaveIds })
+          JSON.stringify({ absentIds, leaveIds: [] })
         );
       };
       const setRowStatus = (row, st) => {
@@ -838,7 +836,6 @@ const Pages = (() => {
           btn.classList.toggle("active", v === st);
           btn.classList.toggle("att-present", v === st && st === "present");
           btn.classList.toggle("att-absent", v === st && st === "absent");
-          btn.classList.toggle("att-leave", v === st && st === "leave");
         });
         persistDraft();
       };
@@ -857,18 +854,15 @@ const Pages = (() => {
         render();
       };
       root.querySelector("#save").onclick = async () => {
-        const absentIds = [],
-          leaveIds = [];
+        const absentIds = [];
         root.querySelectorAll(".att-row").forEach((row) => {
-          const st = readStatus(row);
-          if (st === "absent") absentIds.push(row.dataset.id);
-          if (st === "leave") leaveIds.push(row.dataset.id);
+          if (readStatus(row) === "absent") absentIds.push(row.dataset.id);
         });
         await Api.call("attendance.save", {
           className,
           date,
           absentIds,
-          leaveIds,
+          leaveIds: [],
           notes: root.querySelector("#notes").value
         });
         UI.toast("Attendance saved", "ok");

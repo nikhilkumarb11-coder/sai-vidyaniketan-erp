@@ -1581,12 +1581,6 @@ body.receipt-viewer-open {
   color: var(--accent);
 }
 
-.att-chip.active.att-leave {
-  background: #FEF3C7;
-  border-color: #D97706;
-  color: #B45309;
-}
-
 .marks-card {
   padding: 0.45rem 0.65rem;
 }
