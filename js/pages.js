@@ -1886,13 +1886,13 @@ const Pages = (() => {
       <div class="grid grid-2 import-grid">
         <div class="card">
           <h3>Student list</h3>
-          <p class="import-hint">First line must be: name,parentName,phone,className,annualFee,previousBalance</p>
+          <p class="import-hint">First line must be:<code>name,parentName,phone,className,annualFee,previousBalance</code></p>
           <textarea id="stuCsv" rows="8" placeholder="name,parentName,phone,className,annualFee,previousBalance&#10;Riya,Suresh,9876501234,3,22000,0"></textarea>
           <button class="btn btn-block" id="impStu" style="margin-top:0.75rem">Upload students</button>
         </div>
         <div class="card">
           <h3>Past year totals</h3>
-          <p class="import-hint">First line must be: academicYear,month,feeCollected,expenses,enrollment,pendingBalance</p>
+          <p class="import-hint">First line must be:<code>academicYear,month,feeCollected,expenses,enrollment,pendingBalance</code></p>
           <textarea id="yrCsv" rows="8" placeholder="academicYear,month,feeCollected,expenses,enrollment,pendingBalance&#10;2023-24,YEAR,4000000,3000000,220,250000"></textarea>
           <button class="btn btn-block" id="impYr" style="margin-top:0.75rem">Upload year totals</button>
         </div>
