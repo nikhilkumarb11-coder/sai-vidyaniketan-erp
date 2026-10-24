@@ -138,7 +138,7 @@ const Pages = (() => {
               }</p>
               <div class="dash-focus-links">
                 <a class="btn btn-sm btn-ghost" href="#/attendance">Attendance</a>
-                <a class="btn btn-sm" href="#/whatsapp">WhatsApp</a>
+                <a class="btn btn-sm" href="#/whatsapp?type=absentee">WhatsApp</a>
               </div>
             </div>
             <div class="dash-focus-col">
@@ -969,7 +969,12 @@ const Pages = (() => {
     ]);
     const tplKeys = Object.keys(templates || {});
     const classOrder = CONFIG.classes || [];
-    let tplKey = tplKeys.includes("feeReminder") ? "feeReminder" : tplKeys[0] || "";
+    const typeFromHash = String(hashQuery().type || "").trim();
+    let tplKey = tplKeys.includes(typeFromHash)
+      ? typeFromHash
+      : tplKeys.includes("feeReminder")
+        ? "feeReminder"
+        : tplKeys[0] || "";
     let classFilter = "";
     let attDate = today;
     let absenteeState = { saved: false, classesMarked: 0, students: [] };

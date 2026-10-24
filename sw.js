@@ -1,6 +1,6 @@
 /* Sai Vidyaniketan ERP — shell cache for installable PWA */
-const CACHE = "svs-erp-shell-v32";
-const BUILD = "32";
+const CACHE = "svs-erp-shell-v33";
+const BUILD = "33";
 const SHELL = [
   "./",
   "./index.html",
