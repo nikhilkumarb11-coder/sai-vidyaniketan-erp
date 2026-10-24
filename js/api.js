@@ -85,12 +85,23 @@ const Api = (() => {
   };
 
   function getToken() {
-    return sessionStorage.getItem(TOKEN_KEY) || "";
+    let t = localStorage.getItem(TOKEN_KEY) || "";
+    if (!t) {
+      t = sessionStorage.getItem(TOKEN_KEY) || "";
+      if (t) {
+        localStorage.setItem(TOKEN_KEY, t);
+        sessionStorage.removeItem(TOKEN_KEY);
+      }
+    }
+    return t;
   }
   function setToken(t) {
-    sessionStorage.setItem(TOKEN_KEY, t || "");
+    if (t) localStorage.setItem(TOKEN_KEY, t);
+    else localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
   }
   function clearToken() {
+    localStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
     cache.clear();
     idbClear().catch(() => {});

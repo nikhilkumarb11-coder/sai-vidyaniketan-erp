@@ -454,6 +454,19 @@ function isTruthy_(v) {
   return v === true || v === "TRUE" || v === "true" || v === "Y" || v === 1 || v === "1";
 }
 
+/** Normalize class labels so "1", " 1 ", "Class 1" match. */
+function normalizeClass_(c) {
+  return String(c == null ? "" : c)
+    .replace(/^\s+|\s+$/g, "")
+    .replace(/^class\s+/i, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function classMatch_(a, b) {
+  return normalizeClass_(a) === normalizeClass_(b);
+}
+
 function currentAcademicYear_() {
   return getSetting_("academicYear", "2026-27");
 }

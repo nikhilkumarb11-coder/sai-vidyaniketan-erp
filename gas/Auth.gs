@@ -2,7 +2,8 @@
  * Authentication & sessions
  */
 
-var SESSION_HOURS = 8;
+/** Stay signed in until explicit logout (90 days; refreshed on use). */
+var SESSION_HOURS = 24 * 90;
 
 function sessionCacheKey_(token) {
   return "sess:" + String(token || "").slice(0, 80);
@@ -128,6 +129,16 @@ function requireUser_(token) {
   }
   var user = findById_("Users", session.userId);
   if (!user || !isTruthy_(user.active)) throw new Error("User inactive");
+  // Sliding expiry: keep session alive while the app is used
+  var remaining = new Date(session.expiresAt).getTime() - Date.now();
+  var full = SESSION_HOURS * 3600 * 1000;
+  if (remaining < full * 0.5) {
+    var refreshed = new Date(Date.now() + full).toISOString();
+    try {
+      updateObjectById_("Sessions", session.id, { expiresAt: refreshed });
+      session.expiresAt = refreshed;
+    } catch (e) {}
+  }
   putSessionCache_(token, user.id, session.expiresAt);
   user._token = token;
   return user;

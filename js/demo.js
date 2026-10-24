@@ -261,7 +261,22 @@ const DemoAPI = (() => {
     }
     const user = db.users.find((u) => u.id === session.userId && u.active !== false);
     if (!user) throw Object.assign(new Error("User inactive"), { code: "AUTH" });
+    const full = 90 * 24 * 3600 * 1000;
+    if (new Date(session.expiresAt).getTime() - Date.now() < full * 0.5) {
+      session.expiresAt = new Date(Date.now() + full).toISOString();
+    }
     return user;
+  }
+
+  function normClass(c) {
+    return String(c == null ? "" : c)
+      .trim()
+      .replace(/^class\s+/i, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+  function classMatch(a, b) {
+    return normClass(a) === normClass(b);
   }
 
   function requirePrincipal(user) {
@@ -394,7 +409,7 @@ const DemoAPI = (() => {
         );
         if (!u || u.password !== p.password) return fail("Invalid credentials", "AUTH");
         const token = uid("tok") + uid("tok");
-        const expiresAt = new Date(Date.now() + 8 * 3600 * 1000).toISOString();
+        const expiresAt = new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString();
         db.sessions.push({ token, userId: u.id, expiresAt, createdAt: now() });
         audit(db, u, "login", "Users", u.id);
         const out = { token, expiresAt, user: publicUser(u) };
@@ -513,7 +528,7 @@ const DemoAPI = (() => {
       case "students.list": {
         let rows = db.students.filter((s) => s.active !== false);
         if (!p.includeAllStatuses) rows = rows.filter((s) => s.status === "Active" || !s.status);
-        if (p.className) rows = rows.filter((s) => s.className === p.className);
+        if (p.className) rows = rows.filter((s) => classMatch(s.className, p.className));
         if (p.status) rows = rows.filter((s) => s.status === p.status);
         if (p.q) {
           const q = String(p.q).toLowerCase();
@@ -822,10 +837,13 @@ const DemoAPI = (() => {
           return fail("Not your class", "FORBIDDEN");
         }
         const students = db.students.filter(
-          (s) => s.className === className && (s.section || "A") === section && (s.status === "Active" || !s.status)
+          (s) =>
+            classMatch(s.className, className) &&
+            String(s.section || "A") === String(section) &&
+            (s.status === "Active" || !s.status)
         );
         const record = db.attendance.find(
-          (a) => a.className === className && a.section === section && a.date === date
+          (a) => classMatch(a.className, className) && a.section === section && a.date === date
         );
         return ok({
           className,
@@ -858,7 +876,10 @@ const DemoAPI = (() => {
           return fail("Not your class", "FORBIDDEN");
         }
         const students = db.students.filter(
-          (s) => s.className === className && (s.section || "A") === section && (s.status === "Active" || !s.status)
+          (s) =>
+            classMatch(s.className, className) &&
+            String(s.section || "A") === String(section) &&
+            (s.status === "Active" || !s.status)
         );
         const absentIds = p.absentIds || [];
         const leaveIds = p.leaveIds || [];
@@ -1289,9 +1310,14 @@ const DemoAPI = (() => {
         return ok(e);
       }
       case "marks.get": {
-        const students = db.students.filter((s) => s.className === p.className && (s.status === "Active" || !s.status));
+        const students = db.students.filter(
+          (s) => classMatch(s.className, p.className) && (s.status === "Active" || !s.status)
+        );
         const marks = db.marks.filter(
-          (m) => m.className === p.className && (!p.subject || m.subject === p.subject) && (!p.examId || m.examId === p.examId)
+          (m) =>
+            classMatch(m.className, p.className) &&
+            (!p.subject || m.subject === p.subject) &&
+            (!p.examId || m.examId === p.examId)
         );
         return ok({ students, marks });
       }
@@ -1323,7 +1349,9 @@ const DemoAPI = (() => {
       }
       case "reportcards.get": {
         const className = p.className;
-        let students = db.students.filter((s) => s.className === className && (s.status === "Active" || !s.status));
+        let students = db.students.filter(
+          (s) => classMatch(s.className, className) && (s.status === "Active" || !s.status)
+        );
         if (p.studentId) students = students.filter((s) => s.id === p.studentId);
         const exams = db.exams.filter((e) => e.active !== false).sort((a, b) => a.order - b.order);
         const isEarly = ["Nursery", "LKG", "UKG"].includes(className);

@@ -126,10 +126,13 @@ const Pages = (() => {
           <tbody>${list
             .map(
               (s) => `<tr>
-              <td>${UI.esc(s.admissionNo)}</td><td>${UI.esc(s.name)}</td><td>${UI.esc(s.className)}-${UI.esc(s.section || "A")}</td>
-              <td>${UI.esc(s.parentName)}</td><td>${UI.esc(s.phone)}</td>
-              <td><span class="badge ${s.status === "Active" ? "badge-ok" : "badge-warn"}">${UI.esc(s.status || "Active")}</span></td>
-              <td><button class="btn btn-sm btn-ghost" data-view="${s.id}">View</button>
+              <td data-label="Adm No">${UI.esc(s.admissionNo)}</td>
+              <td data-label="Name">${UI.esc(s.name)}</td>
+              <td data-label="Class">${UI.esc(s.className)}-${UI.esc(s.section || "A")}</td>
+              <td data-label="Parent">${UI.esc(s.parentName)}</td>
+              <td data-label="Phone">${UI.esc(s.phone)}</td>
+              <td data-label="Status"><span class="badge ${s.status === "Active" ? "badge-ok" : "badge-warn"}">${UI.esc(s.status || "Active")}</span></td>
+              <td class="row-actions"><button class="btn btn-sm btn-ghost" data-view="${s.id}">View</button>
                   <button class="btn btn-sm" data-fee="${s.id}">Fee</button></td></tr>`
             )
             .join("")}</tbody></table></div>`;
@@ -395,10 +398,12 @@ const Pages = (() => {
           <tbody>${
             pendingFiltered.length
               ? pendingFiltered
-                  .map(
-                    (s) => `<tr>
-                <td>${UI.esc(s.name)}</td><td>${UI.esc(s.className)}</td><td>${UI.money(s.balance)}</td>
-                <td><button class="btn btn-sm" data-fee="${s.id}">Collect</button></td></tr>`
+                .map(
+                  (s) => `<tr>
+                <td data-label="Student">${UI.esc(s.name)}</td>
+                <td data-label="Class">${UI.esc(s.className)}</td>
+                <td data-label="Balance">${UI.money(s.balance)}</td>
+                <td class="row-actions"><button class="btn btn-sm" data-fee="${s.id}">Collect</button></td></tr>`
                   )
                   .join("")
               : `<tr><td colspan="4" class="empty">No matching students with balance</td></tr>`
@@ -412,17 +417,17 @@ const Pages = (() => {
               ? receipts
                   .map(
                     (p) => `<tr class="${isCancelled(p) ? "row-muted" : ""}">
-                <td>${UI.esc(p.receiptNo)}</td>
-                <td>${UI.esc(p.student.name || "—")}${
+                <td data-label="Receipt">${UI.esc(p.receiptNo)}</td>
+                <td data-label="Student">${UI.esc(p.student.name || "—")}${
                       p.student.className
                         ? `<div class="cell-sub">${UI.esc(p.student.className)}</div>`
                         : ""
                     }</td>
-                <td>${UI.money(p.amount)}</td>
-                <td>${UI.esc(p.mode)}${
+                <td data-label="Amount">${UI.money(p.amount)}</td>
+                <td data-label="Mode">${UI.esc(p.mode)}${
                       p.chequeStatus ? `<div class="cell-sub">${UI.esc(p.chequeStatus)}</div>` : ""
                     }</td>
-                <td>${UI.esc(String(p.createdAt || "").slice(0, 10))}</td>
+                <td data-label="Date">${UI.esc(String(p.createdAt || "").slice(0, 10))}</td>
                 <td class="row-actions">
                   <button type="button" class="btn btn-sm" data-view="${p.id}">View</button>
                   <button type="button" class="btn btn-sm btn-ghost" data-share="${p.id}">Share</button>
@@ -617,15 +622,43 @@ const Pages = (() => {
 
   async function attendancePage(root) {
     const user = AppCache.user();
-    const defaultClass = user.role === "Teacher" ? (user.classAssigned || "1").split("-")[0] : "1";
-    let className = defaultClass;
+    const preferred = user.role === "Teacher" ? (user.classAssigned || "1").split("-")[0] : "1";
+    let allStudents = [];
+    try {
+      allStudents = await Api.call("students.list", {});
+    } catch (e) {
+      allStudents = [];
+    }
+    let className = UI.pickClassWithStudents(allStudents, preferred);
     let date = new Date().toISOString().slice(0, 10);
 
+    const rosterForClass = (cls) =>
+      (allStudents || []).filter(
+        (s) => UI.classMatch(s.className, cls) && (s.status === "Active" || !s.status)
+      );
+
     const render = async () => {
-      const data = await Api.call("attendance.get", { className, date });
+      let data = { students: [], record: null };
+      try {
+        data = await Api.call("attendance.get", { className, date });
+      } catch (e) {
+        UI.toast(e.message || "Could not load attendance", "error");
+      }
+      // Fallback roster from students.list when API returns empty (class label mismatch / lag)
+      let students = data.students || [];
+      if (!students.length) {
+        students = rosterForClass(className).map((s) => ({
+          id: s.id,
+          name: s.name,
+          admissionNo: s.admissionNo,
+          phone: s.phone,
+          parentName: s.parentName
+        }));
+      }
+      data.students = students;
+
       const absent = new Set((data.record && data.record.absentIds) || []);
       const leave = new Set((data.record && data.record.leaveIds) || []);
-      // offline draft
       try {
         const draft = JSON.parse(localStorage.getItem("svs_att_draft_" + className + "_" + date) || "null");
         if (draft && !data.record) {
@@ -645,10 +678,12 @@ const Pages = (() => {
         <div class="card">
           <div class="form-row"><label>Substitute / note</label><input id="notes" value="${UI.esc((data.record && data.record.notes) || "")}" placeholder="Teacher leave / substitute"></div>
           <div class="check-list" id="list">
-            ${data.students
-              .map((s) => {
-                const st = leave.has(s.id) ? "leave" : absent.has(s.id) ? "absent" : "present";
-                return `<div class="check-item" data-id="${s.id}">
+            ${
+              students.length
+                ? students
+                    .map((s) => {
+                      const st = leave.has(s.id) ? "leave" : absent.has(s.id) ? "absent" : "present";
+                      return `<div class="check-item" data-id="${s.id}">
                   <strong>${UI.esc(s.name)}</strong>
                   <select data-status>
                     <option value="present" ${st === "present" ? "selected" : ""}>Present</option>
@@ -656,8 +691,10 @@ const Pages = (() => {
                     <option value="leave" ${st === "leave" ? "selected" : ""}>Leave</option>
                   </select>
                 </div>`;
-              })
-              .join("")}
+                    })
+                    .join("")
+                : `<p class="empty">No students in class ${UI.esc(className)}. Check Students or pick another class.</p>`
+            }
           </div>
         </div>`;
 
@@ -905,35 +942,84 @@ const Pages = (() => {
   }
 
   async function examsPage(root) {
-    const exams = await Api.call("exams.list", {});
-    let className = AppCache.user().role === "Teacher" ? (AppCache.user().classAssigned || "1").split("-")[0] : "1";
-    let subject = (CONFIG.subjectsByClass[className] || ["English"])[0];
+    let exams = [];
+    try {
+      exams = await Api.call("exams.list", {});
+    } catch (e) {
+      exams = [];
+    }
+    let allStudents = [];
+    try {
+      allStudents = await Api.call("students.list", {});
+    } catch (e) {
+      allStudents = [];
+    }
+    const preferred =
+      AppCache.user().role === "Teacher" ? (AppCache.user().classAssigned || "1").split("-")[0] : "1";
+    let className = UI.pickClassWithStudents(allStudents, preferred);
+    let subject = (CONFIG.subjectsByClass[className] || CONFIG.subjectsByClass["1"] || ["English"])[0];
     let examId = exams[0] && exams[0].id;
 
+    const rosterForClass = (cls) =>
+      (allStudents || []).filter(
+        (s) => UI.classMatch(s.className, cls) && (s.status === "Active" || !s.status)
+      );
+
     const render = async () => {
-      const data = await Api.call("marks.get", { className, subject, examId });
+      let data = { students: [], marks: [] };
+      if (examId) {
+        try {
+          data = await Api.call("marks.get", { className, subject, examId });
+        } catch (e) {
+          UI.toast(e.message || "Could not load marks", "error");
+        }
+      }
+      let students = data.students || [];
+      if (!students.length) students = rosterForClass(className);
+
       const exam = exams.find((e) => e.id === examId) || exams[0];
       const markMap = {};
       (data.marks || []).forEach((m) => {
         markMap[m.studentId] = m.marks;
       });
+      const subjects = CONFIG.subjectsByClass[className] || CONFIG.subjectsByClass["1"] || ["English"];
+      if (!subjects.includes(subject)) subject = subjects[0];
+
       root.innerHTML = `
         <div class="page-header"><div><h2>Exams & marks</h2></div></div>
         <div class="toolbar">
           <select id="cls">${UI.classOptions(className)}</select>
-          <select id="subj">${(CONFIG.subjectsByClass[className] || [])
-            .map((s) => `<option ${s === subject ? "selected" : ""}>${s}</option>`)
+          <select id="subj">${subjects
+            .map((s) => `<option ${s === subject ? "selected" : ""}>${UI.esc(s)}</option>`)
             .join("")}</select>
-          <select id="ex">${exams.map((e) => `<option value="${e.id}" ${e.id === examId ? "selected" : ""}>${UI.esc(e.name)}</option>`).join("")}</select>
-          <button class="btn" id="save">Save marks</button>
+          <select id="ex">${
+            exams.length
+              ? exams
+                  .map(
+                    (e) =>
+                      `<option value="${e.id}" ${e.id === examId ? "selected" : ""}>${UI.esc(e.name)}</option>`
+                  )
+                  .join("")
+              : `<option value="">No exams configured</option>`
+          }</select>
+          <button class="btn" id="save" ${!exam ? "disabled" : ""}>Save marks</button>
         </div>
-        <div class="card table-wrap"><table class="data"><thead><tr><th>Student</th><th>Marks / ${exam ? exam.maxMarks : ""}</th></tr></thead>
-        <tbody>${data.students
-          .map(
-            (s) =>
-              `<tr><td>${UI.esc(s.name)}</td><td><input data-id="${s.id}" type="number" value="${markMap[s.id] != null ? markMap[s.id] : ""}" style="width:100px;min-height:40px"></td></tr>`
-          )
-          .join("")}</tbody></table></div>`;
+        <div class="card table-wrap mobile-cards"><table class="data"><thead><tr><th>Student</th><th>Marks / ${
+          exam ? exam.maxMarks : "—"
+        }</th></tr></thead>
+        <tbody>${
+          students.length
+            ? students
+                .map(
+                  (s) =>
+                    `<tr><td data-label="Student">${UI.esc(s.name)}</td><td data-label="Marks"><input data-id="${s.id}" type="number" value="${
+                      markMap[s.id] != null ? markMap[s.id] : ""
+                    }" style="width:100px;min-height:40px;max-width:100%"></td></tr>`
+                )
+                .join("")
+            : `<tr><td colspan="2" class="empty">No students in class ${UI.esc(className)}</td></tr>`
+        }</tbody></table></div>
+        ${!exams.length ? `<p class="empty">Add exams under setup / Exams sheet, then reload.</p>` : ""}`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
         subject = (CONFIG.subjectsByClass[className] || ["English"])[0];
@@ -948,6 +1034,10 @@ const Pages = (() => {
         render();
       };
       root.querySelector("#save").onclick = async () => {
+        if (!exam) {
+          UI.toast("No exam selected", "error");
+          return;
+        }
         const entries = [...root.querySelectorAll("input[data-id]")].map((el) => ({
           studentId: el.dataset.id,
           marks: el.value === "" ? "" : Number(el.value)
@@ -955,7 +1045,7 @@ const Pages = (() => {
         await Api.call("marks.save", {
           className,
           subject,
-          examId,
+          examId: exam.id,
           examName: exam.name,
           maxMarks: exam.maxMarks,
           entries
@@ -967,21 +1057,48 @@ const Pages = (() => {
   }
 
   async function reportCardsPage(root) {
-    let className = "1";
+    let allStudents = [];
+    try {
+      allStudents = await Api.call("students.list", {});
+    } catch (e) {
+      allStudents = [];
+    }
+    let className = UI.pickClassWithStudents(allStudents, "1");
     const render = async () => {
-      const data = await Api.call("reportcards.get", { className });
+      let data = { cards: [], exams: [], school: AppCache.school() };
+      try {
+        data = await Api.call("reportcards.get", { className });
+      } catch (e) {
+        UI.toast(e.message || "Could not load report cards", "error");
+      }
+      if (!(data.cards || []).length) {
+        const roster = (allStudents || []).filter(
+          (s) => UI.classMatch(s.className, className) && (s.status === "Active" || !s.status)
+        );
+        data.cards = roster.map((s) => ({
+          student: s,
+          subjects: [],
+          summary: { percent: null, grade: "—", result: "—", rank: null }
+        }));
+      }
       root.innerHTML = `
         <div class="page-header"><div><h2>Report cards</h2></div>
           <div class="toolbar"><select id="cls">${UI.classOptions(className)}</select>
           <button class="btn" id="print">Print class</button></div></div>
-        <div id="cards">${data.cards
-          .map((c) => reportCardHtml(c, data))
-          .join("")}</div>`;
+        <div id="cards">${
+          (data.cards || []).length
+            ? data.cards.map((c) => reportCardHtml(c, data)).join("")
+            : `<p class="empty">No students in class ${UI.esc(className)}</p>`
+        }</div>`;
       root.querySelector("#cls").onchange = (e) => {
         className = e.target.value;
         render();
       };
-      root.querySelector("#print").onclick = () => UI.printHtml(root.querySelector("#cards").innerHTML);
+      root.querySelector("#print").onclick = () => {
+        const el = root.querySelector("#cards");
+        if (el && el.querySelector(".print-doc")) UI.printHtml(el.innerHTML);
+        else UI.toast("Nothing to print", "error");
+      };
     };
     await render();
   }

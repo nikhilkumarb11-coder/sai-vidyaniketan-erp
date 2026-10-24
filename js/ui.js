@@ -94,10 +94,33 @@ const UI = (() => {
     a.click();
   }
 
+  function normalizeClass(c) {
+    return String(c == null ? "" : c)
+      .trim()
+      .replace(/^class\s+/i, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+
+  function classMatch(a, b) {
+    return normalizeClass(a) === normalizeClass(b);
+  }
+
   function classOptions(selected) {
     return CONFIG.classes
-      .map((c) => `<option value="${c}" ${c === selected ? "selected" : ""}>${c}</option>`)
+      .map((c) => `<option value="${c}" ${classMatch(c, selected) ? "selected" : ""}>${c}</option>`)
       .join("");
+  }
+
+  /** Prefer a class that actually has active students. */
+  function pickClassWithStudents(students, preferred) {
+    const active = (students || []).filter((s) => s.status === "Active" || !s.status);
+    if (preferred && active.some((s) => classMatch(s.className, preferred))) {
+      const hit = active.find((s) => classMatch(s.className, preferred));
+      return hit.className;
+    }
+    const first = active[0];
+    return first ? first.className : preferred || (CONFIG.classes && CONFIG.classes[0]) || "1";
   }
 
   function waLink(phone, text) {
@@ -110,5 +133,19 @@ const UI = (() => {
     return String(tpl || "").replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ""));
   }
 
-  return { toast, money, esc, modal, formVal, printHtml, downloadCsv, classOptions, waLink, fillTemplate };
+  return {
+    toast,
+    money,
+    esc,
+    modal,
+    formVal,
+    printHtml,
+    downloadCsv,
+    classOptions,
+    waLink,
+    fillTemplate,
+    normalizeClass,
+    classMatch,
+    pickClassWithStudents
+  };
 })();

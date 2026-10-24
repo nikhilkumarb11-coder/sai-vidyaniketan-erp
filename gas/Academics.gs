@@ -31,7 +31,7 @@ function marksGet(payload, user) {
   var subject = payload.subject;
   var examId = payload.examId;
   var students = readAllObjects_("Students").filter(function (s) {
-    return s.className === className && (s.status === "Active" || !s.status);
+    return classMatch_(s.className, className) && (s.status === "Active" || !s.status);
   });
   if (user.role === "Teacher" && subject) {
     var subjects = parseJsonField_(user.subjects, []);
@@ -42,7 +42,7 @@ function marksGet(payload, user) {
   var marks = readAllObjects_("Marks").filter(function (m) {
     return (
       isTruthy_(m.active) &&
-      m.className === className &&
+      classMatch_(m.className, className) &&
       (!subject || m.subject === subject) &&
       (!examId || m.examId === examId)
     );
@@ -109,13 +109,13 @@ function reportcardsGet(payload, user) {
   var className = payload.className;
   var studentId = payload.studentId;
   var students = readAllObjects_("Students").filter(function (s) {
-    return s.className === className && (s.status === "Active" || !s.status);
+    return classMatch_(s.className, className) && (s.status === "Active" || !s.status);
   });
   if (studentId) students = students.filter(function (s) { return s.id === studentId; });
 
   var exams = examsList({}, user).data || [];
   var allMarks = readAllObjects_("Marks").filter(function (m) {
-    return isTruthy_(m.active) && m.className === className;
+    return isTruthy_(m.active) && classMatch_(m.className, className);
   });
   var isEarly = ["Nursery", "LKG", "UKG"].indexOf(className) >= 0;
   var subjects = {};
@@ -124,8 +124,11 @@ function reportcardsGet(payload, user) {
   if (!subjectList.length) {
     // fallback from Subjects sheet
     subjectList = readAllObjects_("Subjects")
-      .filter(function (s) { return s.className === className && isTruthy_(s.active); })
+      .filter(function (s) { return classMatch_(s.className, className) && isTruthy_(s.active); })
       .map(function (s) { return s.subjectName; });
+  }
+  if (!subjectList.length) {
+    subjectList = (getSetting_("subjectsByClass", {})[className] || []);
   }
 
   var cards = students.map(function (stu) {

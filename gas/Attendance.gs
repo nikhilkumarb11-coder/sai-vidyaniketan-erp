@@ -18,11 +18,19 @@ function attendanceGet(payload, user) {
   }
 
   var students = readAllObjects_("Students").filter(function (s) {
-    return s.className === className && (s.section || "A") === section && (s.status === "Active" || !s.status);
+    return (
+      classMatch_(s.className, className) &&
+      String(s.section || "A") === String(section) &&
+      (s.status === "Active" || !s.status)
+    );
   });
 
   var rows = readAllObjects_("Attendance").filter(function (a) {
-    return a.className === className && (a.section || "A") === section && String(a.date).slice(0, 10) === date;
+    return (
+      classMatch_(a.className, className) &&
+      String(a.section || "A") === String(section) &&
+      String(a.date).slice(0, 10) === date
+    );
   });
   var record = rows.length ? rows[0] : null;
   return ok_({
@@ -60,7 +68,11 @@ function attendanceSave(payload, user) {
   }
 
   var students = readAllObjects_("Students").filter(function (s) {
-    return s.className === className && (s.section || "A") === section && (s.status === "Active" || !s.status);
+    return (
+      classMatch_(s.className, className) &&
+      String(s.section || "A") === String(section) &&
+      (s.status === "Active" || !s.status)
+    );
   });
   var absentIds = payload.absentIds || [];
   var leaveIds = payload.leaveIds || [];
@@ -68,7 +80,11 @@ function attendanceSave(payload, user) {
   var present = total - absentIds.length - leaveIds.length;
 
   var existing = readAllObjects_("Attendance").filter(function (a) {
-    return a.className === className && (a.section || "A") === section && String(a.date).slice(0, 10) === date;
+    return (
+      classMatch_(a.className, className) &&
+      String(a.section || "A") === String(section) &&
+      String(a.date).slice(0, 10) === date
+    );
   });
 
   var data = {

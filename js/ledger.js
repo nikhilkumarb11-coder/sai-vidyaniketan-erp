@@ -6,6 +6,18 @@ const Ledger = (() => {
     return v === true || v === "TRUE" || v === "true" || v === "Y" || v === 1 || v === "1";
   }
 
+  function normalizeClass(c) {
+    return String(c == null ? "" : c)
+      .trim()
+      .replace(/^class\s+/i, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+
+  function classMatch(a, b) {
+    return normalizeClass(a) === normalizeClass(b);
+  }
+
   function num(v) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
@@ -32,7 +44,7 @@ const Ledger = (() => {
         truthy(s.active) !== false &&
         (!s.academicYear || s.academicYear === year)
     );
-    const filtered = className ? students.filter((s) => s.className === className) : students;
+    const filtered = className ? students.filter((s) => classMatch(s.className, className)) : students;
     const paidBy = {};
     (tables.FeePayments || []).forEach((p) => {
       if (truthy(p.cancelled)) return;
@@ -125,7 +137,7 @@ const Ledger = (() => {
     const year = yearOf(tables);
     let rows = (tables.Students || []).filter((s) => truthy(s.active) !== false);
     rows = rows.filter((s) => !s.academicYear || s.academicYear === year || payload.allYears);
-    if (payload.className) rows = rows.filter((s) => s.className === payload.className);
+    if (payload.className) rows = rows.filter((s) => classMatch(s.className, payload.className));
     if (payload.status) rows = rows.filter((s) => s.status === payload.status);
     else if (!payload.includeAllStatuses) rows = rows.filter((s) => s.status === "Active" || !s.status);
     if (payload.q) {

@@ -81,7 +81,7 @@ function studentsList(payload, user) {
     return !s.academicYear || s.academicYear === year || payload.allYears;
   });
   if (payload.className) {
-    rows = rows.filter(function (s) { return s.className === payload.className; });
+    rows = rows.filter(function (s) { return classMatch_(s.className, payload.className); });
   }
   if (payload.status) {
     rows = rows.filter(function (s) { return s.status === payload.status; });
