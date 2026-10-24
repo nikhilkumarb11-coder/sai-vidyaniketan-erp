@@ -30,8 +30,33 @@ const Pages = (() => {
   async function dashboardPage(root) {
     if (Auth.isPrincipal()) {
       const d = await Api.call("dashboard.principal", {});
-      const classes = Object.keys(d.enrollmentByClass || {});
-      const max = Math.max(1, ...classes.map((c) => d.enrollmentByClass[c]));
+      const classOrder = CONFIG.classes || [];
+      const enrollment = d.enrollmentByClass || {};
+      const classes = classOrder.filter((c) => enrollment[c] != null).concat(
+        Object.keys(enrollment).filter((c) => !classOrder.some((o) => UI.classMatch(o, c)))
+      );
+      const max = Math.max(1, ...classes.map((c) => enrollment[c] || 0));
+      const barPalette = [
+        "#2563eb",
+        "#0d9488",
+        "#d97706",
+        "#db2777",
+        "#7c3aed",
+        "#059669",
+        "#ea580c",
+        "#0284c7",
+        "#c026d3",
+        "#4f46e5",
+        "#ca8a04",
+        "#e11d48",
+        "#0891b2"
+      ];
+      const absentees = Number((d.attendanceToday && d.attendanceToday.absentees) || 0);
+      const defaulters = (d.fees && d.fees.topDefaulters) || [];
+      const enquiries = AppCache.isModuleOn("enquiries") ? d.enquiries || [] : [];
+      const presentPct =
+        d.attendanceToday && d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—";
+
       root.innerHTML = `
         <div class="page-header page-header-compact">
           <div>
@@ -49,17 +74,20 @@ const Pages = (() => {
           <div class="stat"><div class="label">Students</div><div class="value">${d.totalStudents}</div></div>
           <div class="stat"><div class="label">Fees today</div><div class="value ok">${UI.money(d.fees.today)}</div></div>
           <div class="stat"><div class="label">Fees due</div><div class="value accent">${UI.money(d.fees.pendingTotal)}</div></div>
-          <div class="stat"><div class="label">Present today</div><div class="value">${d.attendanceToday.percent != null ? d.attendanceToday.percent + "%" : "—"}</div></div>
+          <div class="stat"><div class="label">Present today</div><div class="value">${presentPct}</div></div>
         </div>
-        <div class="grid grid-2" style="margin-top:1rem">
+        <div class="grid grid-2 dash-mid" style="margin-top:1rem">
           <div class="card">
             <h3>Students in each class</h3>
             <div class="chart-bars">
               ${classes
-                .map((c) => {
-                  const n = d.enrollmentByClass[c];
+                .map((c, i) => {
+                  const n = enrollment[c] || 0;
                   const h = Math.max(8, Math.round((n / max) * 100));
-                  return `<div class="bar-wrap"><div class="bar" style="height:${h}%"><span class="bar-count">${n}</span></div><div class="lbl">${UI.esc(c)}</div></div>`;
+                  const color = barPalette[i % barPalette.length];
+                  return `<div class="bar-wrap"><div class="bar" style="height:${h}%;background:${color}"><span class="bar-count">${n}</span></div><div class="lbl">${UI.esc(
+                    c
+                  )}</div></div>`;
                 })
                 .join("")}
             </div>
@@ -93,18 +121,58 @@ const Pages = (() => {
             })()}
           </div>
         </div>
-        <div class="grid grid-2">
-          ${
-            AppCache.isModuleOn("enquiries")
-              ? `<div class="card"><h3>Admission calls to follow</h3>
-            ${(d.enquiries || []).map((e) => `<div class="check-item"><span>${UI.esc(e.name)} · ${UI.esc(e.classSought)}</span><a class="btn btn-sm btn-ghost" href="#/enquiries">Open</a></div>`).join("") || "<p class='empty'>No open calls</p>"}
-          </div>`
-              : ""
-          }
-          <div class="card"><h3>Store &amp; birthdays</h3>
-            ${(d.lowStock || []).map((i) => `<div class="check-item"><span class="badge badge-warn">Low in store</span> ${UI.esc(i.name)} (${i.qty})</div>`).join("")}
-            ${(d.birthdays || []).map((b) => `<div class="check-item"><span class="badge badge-info">Birthday</span> ${UI.esc(b.name)}</div>`).join("")}
-            ${!(d.lowStock || []).length && !(d.birthdays || []).length ? "<p class='empty'>Nothing to show</p>" : ""}
+        <div class="card dash-focus">
+          <div class="dash-focus-head">
+            <h3>Today's focus</h3>
+            <p class="settings-note" style="margin:0">What needs attention right now</p>
+          </div>
+          <div class="dash-focus-grid">
+            <div class="dash-focus-col">
+              <h4>Absent today</h4>
+              <p class="dash-focus-stat">${absentees}</p>
+              <p class="dash-focus-hint">${
+                absentees
+                  ? "Message parents from WhatsApp → Absent notice"
+                  : "No absentees recorded yet — mark attendance first"
+              }</p>
+              <div class="dash-focus-links">
+                <a class="btn btn-sm btn-ghost" href="#/attendance">Attendance</a>
+                <a class="btn btn-sm" href="#/whatsapp">WhatsApp</a>
+              </div>
+            </div>
+            <div class="dash-focus-col">
+              <h4>Fees to collect</h4>
+              ${
+                defaulters.length
+                  ? `<ul class="dash-focus-list">${defaulters
+                      .slice(0, 5)
+                      .map(
+                        (s) =>
+                          `<li><span>${UI.esc(s.name)} · ${UI.esc(s.className)}</span><strong>${UI.money(
+                            s.balance
+                          )}</strong></li>`
+                      )
+                      .join("")}</ul>`
+                  : `<p class="dash-focus-hint">No pending fees</p>`
+              }
+              <a class="btn btn-sm btn-ghost" href="#/fees">Open fees</a>
+            </div>
+            <div class="dash-focus-col">
+              <h4>Admission calls</h4>
+              ${
+                !AppCache.isModuleOn("enquiries")
+                  ? `<p class="dash-focus-hint">Admission calls are turned off in Settings</p>`
+                  : enquiries.length
+                    ? `<ul class="dash-focus-list">${enquiries
+                        .slice(0, 5)
+                        .map(
+                          (e) =>
+                            `<li><span>${UI.esc(e.name)} · ${UI.esc(e.classSought || "")}</span></li>`
+                        )
+                        .join("")}</ul><a class="btn btn-sm btn-ghost" href="#/enquiries">Open calls</a>`
+                    : `<p class="dash-focus-hint">No open calls</p><a class="btn btn-sm btn-ghost" href="#/enquiries">Admission calls</a>`
+              }
+            </div>
           </div>
         </div>`;
     } else {
