@@ -1,6 +1,6 @@
 const PWA = (() => {
   let deferredPrompt = null;
-  const BUILD = String((typeof CONFIG !== "undefined" && CONFIG.appVersion) || "19");
+  const BUILD = String((typeof CONFIG !== "undefined" && CONFIG.appVersion) || "20");
 
   function base() {
     const b = (CONFIG.basePath || "").replace(/\/$/, "");
