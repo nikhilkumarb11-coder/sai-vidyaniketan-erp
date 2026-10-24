@@ -2098,8 +2098,8 @@ body.receipt-viewer-open {
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  height: 140px;
-  padding-top: 0.5rem;
+  height: 160px;
+  padding-top: 0.35rem;
 }
 
 .chart-bars .bar-wrap {
@@ -2109,18 +2109,16 @@ body.receipt-viewer-open {
   align-items: center;
   height: 100%;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .chart-bars .bar {
-  position: relative;
   width: 100%;
-  max-width: 28px;
-  background: #2563eb;
-  border-radius: 5px 5px 2px 2px;
+  max-width: 26px;
+  background: #5b8def;
+  border-radius: 6px 6px 3px 3px;
   min-height: 4px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .dash-mid {
@@ -2216,22 +2214,22 @@ body.receipt-viewer-open {
 }
 
 .chart-bars .bar-count {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  font-weight: 750;
-  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink);
   line-height: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  margin-bottom: 0.3rem;
 }
 
 .chart-bars .lbl {
   font-size: 0.62rem;
   color: var(--muted);
-  margin-top: 4px;
+  margin-top: 5px;
   text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .skeleton-page {

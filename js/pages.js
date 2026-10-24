@@ -36,20 +36,21 @@ const Pages = (() => {
         Object.keys(enrollment).filter((c) => !classOrder.some((o) => UI.classMatch(o, c)))
       );
       const max = Math.max(1, ...classes.map((c) => enrollment[c] || 0));
+      /* Soft categorical palette — even lightness so the chart reads as one set */
       const barPalette = [
-        "#2563eb",
-        "#0d9488",
-        "#d97706",
-        "#db2777",
-        "#7c3aed",
-        "#059669",
-        "#ea580c",
-        "#0284c7",
-        "#c026d3",
-        "#4f46e5",
-        "#ca8a04",
-        "#e11d48",
-        "#0891b2"
+        "#5B8DEF",
+        "#4DB6AC",
+        "#F0A05A",
+        "#9B8CFF",
+        "#6FCF97",
+        "#E88B9A",
+        "#6BB3D9",
+        "#C9A227",
+        "#8E9AAF",
+        "#D4A5FF",
+        "#7BC8A4",
+        "#E7A87C",
+        "#7AA2E3"
       ];
       const absentees = Number((d.attendanceToday && d.attendanceToday.absentees) || 0);
       const defaulters = (d.fees && d.fees.topDefaulters) || [];
@@ -85,7 +86,7 @@ const Pages = (() => {
                   const n = enrollment[c] || 0;
                   const h = Math.max(8, Math.round((n / max) * 100));
                   const color = barPalette[i % barPalette.length];
-                  return `<div class="bar-wrap"><div class="bar" style="height:${h}%;background:${color}"><span class="bar-count">${n}</span></div><div class="lbl">${UI.esc(
+                  return `<div class="bar-wrap"><span class="bar-count">${n}</span><div class="bar" style="height:${h}%;background:${color}"></div><div class="lbl">${UI.esc(
                     c
                   )}</div></div>`;
                 })
