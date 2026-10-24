@@ -1,9 +1,9 @@
 const PWA = (() => {
   let deferredPrompt = null;
+  const BUILD = String((typeof CONFIG !== "undefined" && CONFIG.appVersion) || "15");
 
   function base() {
     const b = (CONFIG.basePath || "").replace(/\/$/, "");
-    // When opened from file:// or local root without basePath match, still register relative sw
     return b && location.pathname.indexOf(b) === 0 ? b : "";
   }
 
@@ -20,18 +20,79 @@ const PWA = (() => {
     );
   }
 
+  async function clearSiteCaches() {
+    if (!window.caches) return;
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  }
+
+  async function unregisterWorkers() {
+    if (!("serviceWorker" in navigator)) return;
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  }
+
+  /** One-time hard refresh when BUILD changes — fixes stuck phone PWAs */
+  async function migrateBuild() {
+    const KEY = "svs_app_build";
+    let seen = "";
+    try {
+      seen = localStorage.getItem(KEY) || "";
+    } catch (e) {}
+    if (seen === BUILD) return false;
+
+    try {
+      await unregisterWorkers();
+      await clearSiteCaches();
+      localStorage.setItem(KEY, BUILD);
+    } catch (e) {}
+
+    try {
+      if (sessionStorage.getItem("svs_build_reloaded") === BUILD) return false;
+      sessionStorage.setItem("svs_build_reloaded", BUILD);
+    } catch (e) {}
+
+    location.reload();
+    return true;
+  }
+
   async function register() {
     if (!("serviceWorker" in navigator)) return;
     try {
-      const reg = await navigator.serviceWorker.register("sw.js?v=14", { scope: "./" });
-      // Pick up new SW immediately so auth fixes are not stuck behind cache-first
-      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      const reg = await navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" });
+      const wake = (worker) => {
+        if (worker) worker.postMessage({ type: "SKIP_WAITING" });
+      };
+      if (reg.waiting) wake(reg.waiting);
+      if (reg.installing) {
+        reg.installing.addEventListener("statechange", () => {
+          if (reg.waiting) wake(reg.waiting);
+        });
+      }
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing;
+        if (!w) return;
+        w.addEventListener("statechange", () => {
+          if (reg.waiting) wake(reg.waiting);
+        });
+      });
       reg.update().catch(() => {});
+      // Keep checking — phone PWAs often miss the first update
+      setInterval(() => reg.update().catch(() => {}), 60 * 1000);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
+
       navigator.serviceWorker.addEventListener("controllerchange", () => {
-        // Mobile PWAs often keep the old shell until a hard reload — do it once
         if (register._reloaded) return;
         register._reloaded = true;
         location.reload();
+      });
+
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "SW_ACTIVATED" && event.data.build !== BUILD) {
+          location.reload();
+        }
       });
     } catch (e) {
       console.warn("SW register failed", e);
@@ -48,7 +109,7 @@ const PWA = (() => {
     window.addEventListener("appinstalled", () => {
       deferredPrompt = null;
       showInstallButtons(false);
-      UI.toast("App installed", "ok");
+      UI.toast("App added to home screen", "ok");
     });
 
     document.querySelectorAll(".install-btn").forEach((btn) => {
@@ -58,30 +119,30 @@ const PWA = (() => {
           const choice = await deferredPrompt.userChoice;
           deferredPrompt = null;
           showInstallButtons(false);
-          if (choice.outcome === "accepted") UI.toast("Installing…", "ok");
+          if (choice.outcome === "accepted") UI.toast("Adding…", "ok");
           return;
         }
-        // iOS / unsupported browsers
         const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
         UI.toast(
           isiOS
-            ? "Tap Share → Add to Home Screen to install"
-            : "Use your browser menu → Install app / Add to Home Screen",
+            ? "Tap Share → Add to Home Screen"
+            : "Use browser menu → Install app / Add to Home Screen",
           ""
         );
       });
     });
 
-    // Show manual hint button on iOS even without beforeinstallprompt
     if (!isStandalone() && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
       showInstallButtons(true);
     }
   }
 
-  function start() {
-    register();
+  async function start() {
+    const reloading = await migrateBuild();
+    if (reloading) return;
     wireInstall();
+    register();
   }
 
-  return { start, base };
+  return { start, base, BUILD };
 })();

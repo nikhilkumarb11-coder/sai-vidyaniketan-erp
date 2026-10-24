@@ -3,6 +3,8 @@
  * After first launch, Principal Settings in the Sheet take precedence.
  */
 const CONFIG = {
+  /** Bump this whenever the phone app must drop its old cache */
+  appVersion: "15",
   apiUrl: "https://script.google.com/macros/s/AKfycbwR5t_A3S-vAKmLLA-XI5S4EYCApegFuJVyQMsqD96d_M8fKPMGVhiqdhr_ptSd-DSn/exec",
   school: {
     name: "Sai Vidyaniketan School",

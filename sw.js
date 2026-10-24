@@ -1,42 +1,61 @@
 /* Sai Vidyaniketan ERP — shell cache for installable PWA */
-const CACHE = "svs-erp-shell-v14";
+const CACHE = "svs-erp-shell-v15";
+const BUILD = "15";
 const SHELL = [
   "./",
   "./index.html",
-  "./config.js",
+  "./config.js?v=" + BUILD,
   "./manifest.webmanifest",
-  "./css/theme.css",
-  "./css/app.css",
+  "./css/theme.css?v=" + BUILD,
+  "./css/app.css?v=" + BUILD,
   "./assets/logo.jpg",
-  "./js/demo.js",
-  "./js/ledger.js",
-  "./js/core.js",
-  "./js/api.js",
-  "./js/cache.js",
-  "./js/ui.js",
-  "./js/receiptPdf.js",
-  "./js/auth.js",
-  "./js/router.js",
-  "./js/pages.js",
-  "./js/pwa.js",
-  "./js/app.js"
+  "./js/demo.js?v=" + BUILD,
+  "./js/ledger.js?v=" + BUILD,
+  "./js/core.js?v=" + BUILD,
+  "./js/api.js?v=" + BUILD,
+  "./js/cache.js?v=" + BUILD,
+  "./js/ui.js?v=" + BUILD,
+  "./js/receiptPdf.js?v=" + BUILD,
+  "./js/auth.js?v=" + BUILD,
+  "./js/router.js?v=" + BUILD,
+  "./js/pages.js?v=" + BUILD,
+  "./js/pwa.js?v=" + BUILD,
+  "./js/app.js?v=" + BUILD
 ];
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data && event.data.type === "GET_BUILD") {
+    event.source && event.source.postMessage({ type: "BUILD", build: BUILD });
+  }
 });
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE)
+      .then((cache) =>
+        Promise.all(
+          SHELL.map((url) =>
+            cache.add(url).catch(() => cache.add(url.split("?")[0]).catch(() => {}))
+          )
+        )
+      )
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() =>
+        self.clients.matchAll({ type: "window" }).then((clients) => {
+          clients.forEach((c) => c.postMessage({ type: "SW_ACTIVATED", build: BUILD }));
+        })
+      )
   );
 });
 
@@ -63,10 +82,10 @@ self.addEventListener("fetch", (event) => {
       path.endsWith("sw.js") ||
       path.endsWith("manifest.webmanifest"));
 
-  // Network-first for HTML/JS/CSS so session fixes deploy immediately
+  // Network-first for HTML/JS/CSS so phone apps pick up wording / fixes
   if (isAppShell) {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" })
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
@@ -74,7 +93,9 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(() => caches.match(req).then((c) => c || caches.match("./index.html")))
+        .catch(() =>
+          caches.match(req).then((c) => c || caches.match("./index.html") || caches.match("./"))
+        )
     );
     return;
   }
